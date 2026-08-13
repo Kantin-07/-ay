@@ -305,12 +305,12 @@
 </head>
 <body>
   <h1>👥 Kişi & Malzeme Bütçe</h1>
-  <p class="subtitle">Gelen + Malzeme + Eski Borç → Kalan bütçe</p>
+  <p class="subtitle">Gelen + Gider → Elimizdeki para</p>
 
   <!-- EN ÜSTTE: TOPLAM PARA + BORÇ -->
   <div class="top-totals">
     <div class="top-box kalan">
-      <div class="label">Kalan Para</div>
+      <div class="label">Elimizdeki Para</div>
       <div class="value" id="sumKalan">0 ₺</div>
     </div>
     <div class="top-box borc">
@@ -624,7 +624,8 @@
       return top;
     }
     function kalan() {
-      return state.butce - totalGonderilen() - totalGider() - totalBorc();
+      // Elimizdeki para = bütçe + gelen - gider
+      return state.butce + totalGonderilen() - totalGider();
     }
 
     function updateSummary() {
@@ -661,24 +662,25 @@
       );
       let html = `<table class="excel-table">
         <thead><tr>
+          <th style="width:36px;text-align:center">#</th>
           <th>Ad Soyad</th>
           <th>Not</th>
           <th style="text-align:right">Toplam Gelen</th>
+          <th></th>
         </tr></thead><tbody>`;
-      sorted.forEach(k => {
+      sorted.forEach((k, idx) => {
         const gelenK = state.gelenKisiler.find(g => g.ad === k.ad);
         const toplam = gelenK ? kisiGelenToplam(gelenK) : 0;
         const kid = String(k.id);
         html += `<tr>
-          <td>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-              <span>${escape(k.ad)}</span>
-              <button type="button" onclick="window.delKisi('${kid}')" title="Sil"
-                style="flex-shrink:0;min-width:34px;min-height:34px;border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:1rem;cursor:pointer;">Sil</button>
-            </div>
-          </td>
+          <td style="text-align:center;color:var(--muted);font-weight:700">${idx + 1}</td>
+          <td style="font-weight:600">${escape(k.ad)}</td>
           <td style="color:var(--muted)">${escape(k.not) || '—'}</td>
           <td class="num" style="color:var(--primary)">${formatMoney(toplam)}</td>
+          <td style="width:48px;text-align:center">
+            <button type="button" onclick="window.delKisi('${kid}')" title="Sil"
+              style="border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:0.78rem;font-weight:700;padding:6px 10px;cursor:pointer;">Sil</button>
+          </td>
         </tr>`;
       });
       html += '</tbody></table>';
@@ -705,16 +707,12 @@
         </tr></thead><tbody>`;
 
       const gecenAy = (buAy + 11) % 12; // geçen ay
-      sorted.forEach(k => {
+      sorted.forEach((k, idx) => {
         const aylar = k.aylar || {};
         const editing = gelenEditMode.has(k.id);
         html += `<tr>
-          <td style="position:sticky;left:0;background:#fff;font-weight:600;z-index:1;min-width:120px">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-              <span>${escape(k.ad)}</span>
-              <button type="button" onclick="window.delGelenKisi('${k.id}')" title="Sil"
-                style="flex-shrink:0;min-width:32px;min-height:32px;border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:0.95rem;cursor:pointer;">Sil</button>
-            </div>
+          <td style="position:sticky;left:0;background:#fff;font-weight:600;z-index:1;min-width:130px">
+            <span style="color:var(--muted);margin-right:6px">${idx + 1}.</span>${escape(k.ad)}
           </td>
           <td style="text-align:center;padding:2px">
             <button type="button" onclick="gelenAyEkle250('${k.id}')"
@@ -796,6 +794,7 @@
       }
       let html = `<table class="excel-table">
         <thead><tr>
+          <th style="width:36px;text-align:center">#</th>
           <th>Malzeme</th>
           <th style="text-align:right">Fiyat</th>
           <th style="text-align:right">Miktar</th>
@@ -803,11 +802,12 @@
           <th>Durum</th>
           <th></th>
         </tr></thead><tbody>`;
-      state.malzemeler.forEach(m => {
+      state.malzemeler.forEach((m, idx) => {
         const tutar = Number(m.fiyat) * Number(m.miktar);
         const editing = malzemeEditMode.has(m.id);
         if (editing) {
           html += `<tr>
+            <td style="text-align:center;color:var(--muted);font-weight:700">${idx + 1}</td>
             <td><input type="text" data-malzeme-id="${m.id}" data-field="ad"
               value="${escape(m.ad)}"
               style="width:100%;border:1px solid #93c5fd;border-radius:4px;padding:4px;font-size:0.85rem"
@@ -836,21 +836,18 @@
           </tr>`;
         } else {
           html += `<tr>
-            <td>
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-                <span>${escape(m.ad)}</span>
-                <button type="button" onclick="window.delMalzeme('${m.id}')" title="Sil"
-                  style="flex-shrink:0;min-width:32px;min-height:32px;border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:0.95rem;cursor:pointer;">Sil</button>
-              </div>
-            </td>
+            <td style="text-align:center;color:var(--muted);font-weight:700">${idx + 1}</td>
+            <td>${escape(m.ad)}</td>
             <td class="num">${formatMoney(m.fiyat)}</td>
             <td class="num">${m.miktar}</td>
             <td class="num" style="color:var(--orange)">${formatMoney(tutar)}</td>
             <td><span class="badge ${m.alindi === 'Evet' ? 'badge-yes' : 'badge-no'}"
                   onclick="toggleAlindi('${m.id}')">${m.alindi === 'Evet' ? 'Alındı' : 'Bekliyor'}</span></td>
-            <td style="width:40px;text-align:center">
+            <td style="width:56px;text-align:center;white-space:nowrap">
               <button type="button" onclick="toggleMalzemeDuzenle('${m.id}')" title="Düzenle"
                 style="border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:4px 7px;font-size:0.75rem;cursor:pointer;font-weight:700">✎</button>
+              <button type="button" onclick="window.delMalzeme('${m.id}')" title="Sil"
+                style="border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:0.78rem;font-weight:700;padding:4px 8px;cursor:pointer;">Sil</button>
             </td>
           </tr>`;
         }
@@ -879,16 +876,12 @@
           <th></th>
         </tr></thead><tbody>`;
 
-      sortedBorc.forEach(k => {
+      sortedBorc.forEach((k, idx) => {
         const aylar = k.aylar || {};
         const kid = String(k.id);
         html += `<tr>
-          <td style="position:sticky;left:0;background:#fff;font-weight:600;z-index:1;min-width:120px">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-              <span>${escape(k.ad)}</span>
-              <button type="button" onclick="window.delBorcKisi('${kid}')" title="Sil"
-                style="flex-shrink:0;min-width:32px;min-height:32px;border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:0.95rem;cursor:pointer;">Sil</button>
-            </div>
+          <td style="position:sticky;left:0;background:#fff;font-weight:600;z-index:1;min-width:130px">
+            <span style="color:var(--muted);margin-right:6px">${idx + 1}.</span>${escape(k.ad)}
           </td>
           <td style="text-align:center;padding:2px">
             <button type="button" onclick="borcAyEkle250('${kid}')"
@@ -1101,10 +1094,10 @@
 
       // Genel kalan
       html += `<div style="margin-top:14px;padding:12px;background:#f0fdf4;border-radius:12px;border:1px solid #bbf7d0;text-align:center">
-        <div style="font-size:0.75rem;color:#166534">KALAN PARA</div>
+        <div style="font-size:0.75rem;color:#166534">ELİMİZDEKİ PARA</div>
         <div style="font-size:1.4rem;font-weight:800;color:#16a34a">${formatMoney(kalan())}</div>
         <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">
-          Bütçe ${formatMoney(state.butce)} − Gelen ${formatMoney(totalGonderilen())} − Gider ${formatMoney(totalGider())} − Borç ${formatMoney(totalBorc())}
+          Bütçe ${formatMoney(state.butce)} + Gelen ${formatMoney(totalGonderilen())} − Gider ${formatMoney(totalGider())}
         </div>
       </div>`;
 
