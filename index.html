@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Kişi & Malzeme" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>Kişi & Malzeme Bütçe</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #2563eb;
+      --primary-soft: #dbeafe;
+      --green: #16a34a;
+      --green-soft: #dcfce7;
+      --orange: #ea580c;
+      --orange-soft: #ffedd5;
+      --red: #dc2626;
+      --red-soft: #fee2e2;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --radius: 14px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: calc(12px + var(--safe-top)) 14px calc(24px + var(--safe-bottom));
+      line-height: 1.45;
+    }
+
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 4px;
+      color: var(--primary);
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* En üstte Toplam Para + Borç */
+    .top-totals {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .top-box {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 14px 12px;
+      text-align: center;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .top-box .label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .top-box .value {
+      font-size: 1.35rem;
+      font-weight: 800;
+    }
+    .top-box.kalan .value { color: var(--green); }
+    .top-box.borc .value { color: var(--red); }
+
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .summary-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 10px 8px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .summary-card .label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    .summary-card .value {
+      font-size: 0.9rem;
+      font-weight: 700;
+      word-break: break-all;
+    }
+    .summary-card.gonderilen .value { color: var(--primary); }
+    .summary-card.gider .value { color: var(--orange); }
+    .summary-card.butce .value { color: var(--text); }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .card h2 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .field { margin-bottom: 10px; }
+    .field label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .field input, .field select {
+      width: 100%;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 12px;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #fff;
+    }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-outline {
+      background: #fff;
+      color: var(--primary);
+      border: 1.5px solid var(--primary);
+    }
+
+    /* Excel tarzı tablo listeler */
+    .excel-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .excel-table th {
+      background: #e2e8f0;
+      color: #1e293b;
+      font-weight: 700;
+      text-align: left;
+      padding: 8px 6px;
+      border: 1px solid #cbd5e1;
+      white-space: nowrap;
+      font-size: 0.75rem;
+    }
+    .excel-table td {
+      padding: 8px 6px;
+      border: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+    .excel-table tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+    .excel-table .num {
+      text-align: right;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .excel-table .del-btn {
+      background: none;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      opacity: 0.55;
+      padding: 2px 4px;
+    }
+    .excel-table .del-btn:active { opacity: 1; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 7px;
+      border-radius: 5px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .badge-yes { background: var(--green-soft); color: var(--green); }
+    .badge-no { background: var(--red-soft); color: var(--red); }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 18px 10px;
+      font-size: 0.88rem;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 12px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tab {
+      flex-shrink: 0;
+      padding: 7px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .actions .btn { flex: 1; }
+
+    #toast {
+      position: fixed;
+      bottom: calc(24px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #0f172a;
+      color: #fff;
+      padding: 11px 14px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 10000;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 92vw;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    #toast button {
+      border: none;
+      background: #22c55e;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.82rem;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>👥 Kişi & Malzeme Bütçe</h1>
+  <p class="subtitle">Gelen + Malzeme + Eski Borç → Kalan bütçe</p>
+
+  <!-- EN ÜSTTE: TOPLAM PARA + BORÇ -->
+  <div class="top-totals">
+    <div class="top-box kalan">
+      <div class="label">Kalan Para</div>
+      <div class="value" id="sumKalan">0 ₺</div>
+    </div>
+    <div class="top-box borc">
+      <div class="label">Toplam Borç</div>
+      <div class="value" id="sumBorc">0 ₺</div>
+    </div>
+  </div>
+
+  <!-- Alt toplamlar -->
+  <div class="summary">
+    <div class="summary-card butce">
+      <div class="label">Bütçe</div>
+      <div class="value" id="sumButce">0 ₺</div>
+    </div>
+    <div class="summary-card gonderilen">
+      <div class="label">Gelen</div>
+      <div class="value" id="sumGonderilen">0 ₺</div>
+    </div>
+    <div class="summary-card gider">
+      <div class="label">Gider</div>
+      <div class="value" id="sumGider">0 ₺</div>
+    </div>
+  </div>
+
+  <!-- BÜTÇE – açılır/kapanır -->
+  <div class="card" style="padding:0;overflow:hidden;">
+    <button type="button" onclick="toggleButcePanel()"
+      style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:none;background:#eff6ff;color:#1e3a8a;font-size:1rem;font-weight:700;cursor:pointer;">
+      <span>💰 Toplam Bütçe</span>
+      <span id="butceOk" style="transition:transform .2s;">▼</span>
+    </button>
+    <div id="butcePanel" style="display:none;padding:12px 16px 16px;border-top:1px solid #dbeafe;">
+      <div class="field">
+        <label>Başlangıç bütçesi (₺)</label>
+        <input type="number" id="butceInput" placeholder="Örn: 50000" inputmode="decimal" />
+      </div>
+      <button type="button" class="btn btn-primary" onclick="saveButce()">Kaydet</button>
+    </div>
+  </div>
+
+  <!-- SEKMELER -->
+  <div class="tabs">
+    <button class="tab active" data-tab="kisiler" onclick="switchTab('kisiler')">👥 Kişiler</button>
+    <button class="tab" data-tab="gonderimler" onclick="switchTab('gonderimler')">💸 Gelen</button>
+    <button class="tab" data-tab="malzemeler" onclick="switchTab('malzemeler')">🛒 Malzemeler</button>
+    <button class="tab" data-tab="borclar" onclick="switchTab('borclar')">📋 Eski Borç</button>
+  </div>
+
+  <!-- KİŞİLER -->
+  <div id="panel-kisiler" class="panel">
+    <div class="card">
+      <h2>➕ Kişi Ekle</h2>
+      <div class="field">
+        <label>Ad Soyad</label>
+        <input type="text" id="kisiAd" placeholder="Örn: Ahmet Yılmaz" />
+      </div>
+      <div class="field">
+        <label>Not (opsiyonel)</label>
+        <input type="text" id="kisiNot" placeholder="Aylık destek vb." />
+      </div>
+      <button type="button" class="btn btn-green" onclick="addKisi()">Kişi Ekle</button>
+    </div>
+    <div class="card">
+      <h2>📋 Kişi Listesi</h2>
+      <div id="kisiList"></div>
+    </div>
+  </div>
+
+  <!-- GÖNDERİMLER -->
+  <div id="panel-gonderimler" class="panel" style="display:none">
+    <div class="card">
+      <h2>➕ Gelen Kişi Ekle</h2>
+      <div class="field">
+        <label>Kişiler listesinden seç</label>
+        <select id="gelenKisiSec">
+          <option value="">— Kişi seçin —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>veya yeni isim yaz</label>
+        <input type="text" id="gelenAd" placeholder="Örn: Ahmet Yılmaz" />
+      </div>
+      <button type="button" class="btn btn-green" onclick="addGelenKisi()">Kişi Ekle</button>
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Kişi ekledikten sonra yeşil <b>+</b> ile bu aya 250 ekleyebilir veya hücrelere yazabilirsiniz.</p>
+    </div>
+    <div class="card" style="overflow-x:auto;">
+      <h2>📋 Gelen Tablosu (12 Ay)</h2>
+      <div id="gonderimList"></div>
+    </div>
+  </div>
+
+  <!-- MALZEMELER -->
+  <div id="panel-malzemeler" class="panel" style="display:none">
+    <div class="card">
+      <h2>➕ Malzeme / Gider Ekle</h2>
+      <div class="field">
+        <label>Malzeme Adı</label>
+        <input type="text" id="malzemeAd" placeholder="Örn: Çay (kg), Bardak, Kahve..." />
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label>Birim Fiyat (₺)</label>
+          <input type="number" id="malzemeFiyat" placeholder="0" inputmode="decimal" />
+        </div>
+        <div class="field">
+          <label>Miktar</label>
+          <input type="number" id="malzemeMiktar" placeholder="1" inputmode="decimal" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Alındı mı?</label>
+        <select id="malzemeAlindi">
+          <option value="Hayır">Hayır (Bekliyor)</option>
+          <option value="Evet">Evet (Alındı)</option>
+        </select>
+      </div>
+      <button class="btn btn-green" onclick="addMalzeme()">Malzeme Ekle</button>
+    </div>
+    <div class="card">
+      <h2>📋 Malzeme Listesi</h2>
+      <div id="malzemeList"></div>
+    </div>
+  </div>
+
+  <!-- ESKİ BORÇ -->
+  <div id="panel-borclar" class="panel" style="display:none">
+    <div class="card">
+      <h2>➕ Borçlu Kişi Ekle</h2>
+      <div class="field">
+        <label>Kişiler listesinden seç</label>
+        <select id="borcKisiSec">
+          <option value="">— Kişi seçin —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>veya yeni isim yaz</label>
+        <input type="text" id="borcAd" placeholder="Örn: Ahmet Yılmaz" />
+      </div>
+      <button type="button" class="btn btn-green" onclick="addBorcKisi()">Kişi Ekle</button>
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Aylara <b>elle tutar yazın</b>. Yeşil <b>+</b> kısayol ile 250 yazar. <b>−</b> = ödendi. ✎ kaydeder, Sil ile siler. Sadece girilen tutarlar toplanır.</p>
+    </div>
+    <div class="card" style="overflow-x:auto;">
+      <h2>📋 Eski Borç Tablosu (12 Ay)</h2>
+      <div id="borcList"></div>
+    </div>
+  </div>
+
+  <!-- TÜM İŞLEMLER butonu -->
+  <div class="card" style="padding:12px;">
+    <button type="button" class="btn btn-primary" onclick="openTumIslemler()"
+      style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;font-size:1rem;">
+      📊 Tüm İşlemler
+    </button>
+  </div>
+
+  <!-- Yukarı açılan tam sayfa panel -->
+  <div id="tumIslemlerOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.45);">
+    <div id="tumIslemlerSheet" style="position:absolute;left:0;right:0;bottom:0;top:8%;background:#f8fafc;border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,0.15);display:flex;flex-direction:column;overflow:hidden;transform:translateY(100%);transition:transform .28s ease;">
+      <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #e2e8f0;background:#fff;">
+        <div>
+          <div style="font-size:1.05rem;font-weight:800;color:#0f172a;">📊 Tüm İşlemler</div>
+          <div style="font-size:0.72rem;color:#64748b;">Gelen · Vermeyen · Borç · Alınan</div>
+        </div>
+        <button type="button" onclick="closeTumIslemler()"
+          style="width:36px;height:36px;border:none;border-radius:50%;background:#f1f5f9;color:#334155;font-size:1.2rem;cursor:pointer;font-weight:700;">✕</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px 28px;">
+        <div id="tumIslemler"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Excel & Temizle -->
+  <div class="card">
+    <h2>📤 Excel / Veri</h2>
+    <div class="actions" style="flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="exportExcel()">Excel’e Aktar</button>
+      <button class="btn btn-outline" onclick="document.getElementById('excelFile').click()">Excel’den Yükle</button>
+      <input type="file" id="excelFile" accept=".csv,text/csv" style="display:none" onchange="importExcel(event)" />
+    </div>
+    <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Önce “Excel’e Aktar” ile indirip düzenleyin, sonra “Excel’den Yükle” ile geri yükleyin (CSV dosyası).</p>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    const STORAGE_KEY = 'kisiMalzemeButce_v3';
+    const AYLAR = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+    let state = {
+      butce: 0,
+      kisiler: [],
+      gelenKisiler: [],  // { id, ad, aylar: {0:'', 1:'', ...} }  tutar girilince o aya yazılır
+      malzemeler: [],
+      borcKisiler: []   // { id, ad, aylar: {0:'', ...} }  boş=250, -1="-"
+    };
+    // ✎ basınca kutular açılır (silmez)
+    const gelenEditMode = new Set();
+    const malzemeEditMode = new Set();
+    const borcEditMode = new Set();
+
+    function formatMoney(n) {
+      return (Number(n) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' ₺';
+    }
+    function uid() { return Date.now() + Math.random().toString(36).slice(2, 7); }
+    function today() {
+      const d = new Date();
+      return d.toISOString().slice(0, 10);
+    }
+    let lastDeleted = null; // { type, items: [...] }
+    let toastTimer = null;
+
+    function showToast(msg, withUndo) {
+      const t = document.getElementById('toast');
+      if (!t) return;
+      if (toastTimer) clearTimeout(toastTimer);
+      if (withUndo) {
+        t.innerHTML = '<span>' + msg + '</span><button type="button" onclick="undoDelete()">Geri Al</button>';
+        t.classList.add('show');
+        toastTimer = setTimeout(() => {
+          t.classList.remove('show');
+          lastDeleted = null;
+        }, 5000);
+      } else {
+        t.textContent = msg;
+        t.classList.add('show');
+        toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+      }
+    }
+
+    function undoDelete() {
+      if (!lastDeleted) {
+        showToast('Geri alınacak bir şey yok');
+        return;
+      }
+      const d = lastDeleted;
+      lastDeleted = null;
+      if (d.type === 'kisi') {
+        d.items.kisiler.forEach(k => {
+          if (!state.kisiler.some(x => String(x.id) === String(k.id))) state.kisiler.push(k);
+        });
+        d.items.gelen.forEach(g => {
+          if (!state.gelenKisiler.some(x => String(x.id) === String(g.id))) state.gelenKisiler.push(g);
+        });
+        d.items.borc.forEach(b => {
+          if (!state.borcKisiler.some(x => String(x.id) === String(b.id))) state.borcKisiler.push(b);
+        });
+      } else if (d.type === 'gelen') {
+        d.items.forEach(g => {
+          if (!state.gelenKisiler.some(x => String(x.id) === String(g.id))) state.gelenKisiler.push(g);
+        });
+      } else if (d.type === 'borc') {
+        d.items.forEach(b => {
+          if (!state.borcKisiler.some(x => String(x.id) === String(b.id))) state.borcKisiler.push(b);
+        });
+      } else if (d.type === 'malzeme') {
+        d.items.forEach(m => {
+          if (!state.malzemeler.some(x => String(x.id) === String(m.id))) state.malzemeler.push(m);
+        });
+      }
+      save();
+      refreshAll();
+      showToast('Geri alındı');
+    }
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const p = JSON.parse(raw);
+          state.butce = p.butce || 0;
+          state.kisiler = Array.isArray(p.kisiler) ? p.kisiler : [];
+          state.gelenKisiler = Array.isArray(p.gelenKisiler) ? p.gelenKisiler : (Array.isArray(p.gonderimler) ? [] : []);
+          state.malzemeler = Array.isArray(p.malzemeler) ? p.malzemeler : [];
+          state.borcKisiler = Array.isArray(p.borcKisiler) ? p.borcKisiler : [];
+        }
+      } catch (e) {}
+    }
+
+    function totalGonderilen() {
+      return state.gelenKisiler.reduce((s, k) => {
+        const aylar = k.aylar || {};
+        return s + Object.values(aylar).reduce((a, v) => a + (Number(v) || 0), 0);
+      }, 0);
+    }
+    function kisiGelenToplam(k) {
+      const aylar = k.aylar || {};
+      return Object.values(aylar).reduce((a, v) => a + (Number(v) || 0), 0);
+    }
+    function totalGider() {
+      return state.malzemeler
+        .filter(m => m.alindi === 'Evet')
+        .reduce((s, m) => s + (Number(m.fiyat) * Number(m.miktar)), 0);
+    }
+    // Ay değeri: -1 = ödendi ("-"), boş = 250, sayı = o tutar
+    function ayBorcDegeri(val) {
+      // Sadece elle girilen tutarlar toplanır; boş = 0, ödendi (−) = 0
+      if (val === -1 || val === '-1' || val === '-' || val === '−') return 0;
+      if (val === '' || val === null || val === undefined) return 0;
+      const n = Number(val);
+      return isNaN(n) ? 0 : n;
+    }
+    function totalBorc() {
+      return state.borcKisiler.reduce((s, k) => s + kisiBorcToplam(k), 0);
+    }
+    function kisiBorcToplam(k) {
+      const aylar = k.aylar || {};
+      let top = 0;
+      for (let i = 0; i < 12; i++) top += ayBorcDegeri(aylar[i]);
+      return top;
+    }
+    function kalan() {
+      return state.butce - totalGonderilen() - totalGider() - totalBorc();
+    }
+
+    function updateSummary() {
+      document.getElementById('sumButce').textContent = formatMoney(state.butce);
+      document.getElementById('sumGonderilen').textContent = formatMoney(totalGonderilen());
+      document.getElementById('sumGider').textContent = formatMoney(totalGider());
+      document.getElementById('sumBorc').textContent = formatMoney(totalBorc());
+      document.getElementById('sumKalan').textContent = formatMoney(kalan());
+      document.getElementById('butceInput').value = state.butce || '';
+    }
+
+    function escape(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+    function formatDate(iso) {
+      if (!iso) return '';
+      const [y, m, d] = iso.split('-');
+      return `${d}.${m}.${y}`;
+    }
+
+    function renderKisiler() {
+      const list = document.getElementById('kisiList');
+      if (state.kisiler.length === 0) {
+        list.innerHTML = '<div class="empty">Henüz kişi yok</div>';
+        return;
+      }
+      // Alfabetik sırala (Türkçe karakterlere uygun)
+      const sorted = [...state.kisiler].sort((a, b) =>
+        (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' })
+      );
+      let html = `<table class="excel-table">
+        <thead><tr>
+          <th>Ad Soyad</th>
+          <th>Not</th>
+          <th style="text-align:right">Toplam Gelen</th>
+        </tr></thead><tbody>`;
+      sorted.forEach(k => {
+        const gelenK = state.gelenKisiler.find(g => g.ad === k.ad);
+        const toplam = gelenK ? kisiGelenToplam(gelenK) : 0;
+        const kid = String(k.id);
+        html += `<tr>
+          <td>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <span>${escape(k.ad)}</span>
+              <button type="button" onclick="window.delKisi('${kid}')" title="Sil"
+                style="flex-shrink:0;min-width:34px;min-height:34px;border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:1rem;cursor:pointer;">Sil</button>
+            </div>
+          </td>
+          <td style="color:var(--muted)">${escape(k.not) || '—'}</td>
+          <td class="num" style="color:var(--primary)">${formatMoney(toplam)}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      list.innerHTML = html;
+    }
+
+    function renderGonderimler() {
+      const list = document.getElementById('gonderimList');
+      if (state.gelenKisiler.length === 0) {
+        list.innerHTML = '<div class="empty">Henüz gelen kişi yok. Yukarıdan ekleyin.</div>';
+        return;
+      }
+      const sorted = [...state.gelenKisiler].sort((a, b) =>
+        (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' })
+      );
+      const buAy = new Date().getMonth(); // 0-11
+      let html = `<table class="excel-table" style="min-width:720px">
+        <thead><tr>
+          <th style="position:sticky;left:0;background:#e2e8f0;z-index:1">Kişi</th>
+          <th style="text-align:center;width:40px">+</th>`;
+      AYLAR.forEach(a => { html += `<th style="text-align:center;min-width:52px">${a}</th>`; });
+      html += `<th style="text-align:right;background:#dbeafe">Toplam</th>
+          <th></th>
+        </tr></thead><tbody>`;
+
+      const gecenAy = (buAy + 11) % 12; // geçen ay
+      sorted.forEach(k => {
+        const aylar = k.aylar || {};
+        const editing = gelenEditMode.has(k.id);
+        html += `<tr>
+          <td style="position:sticky;left:0;background:#fff;font-weight:600;z-index:1;min-width:120px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+              <span>${escape(k.ad)}</span>
+              <button type="button" onclick="window.delGelenKisi('${k.id}')" title="Sil"
+                style="flex-shrink:0;min-width:32px;min-height:32px;border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:0.95rem;cursor:pointer;">Sil</button>
+            </div>
+          </td>
+          <td style="text-align:center;padding:2px">
+            <button type="button" onclick="gelenAyEkle250('${k.id}')"
+              title="Bu aya 250 yaz (yeşil)"
+              style="width:32px;height:32px;border:none;border-radius:8px;background:#16a34a;color:#fff;font-size:1.2rem;font-weight:700;cursor:pointer;line-height:1">+</button>
+          </td>`;
+        for (let i = 0; i < 12; i++) {
+          const raw = aylar[i];
+          const num = Number(raw) || 0;
+          const isAktifAy = (i === buAy || i === gecenAy);
+          // Kayıtlı rakam her zaman görünsün (silinmesin)
+          const displayVal = num > 0 ? String(num) : '';
+          let cellStyle = '';
+          let inputStyle = '';
+          let readonly = '';
+
+          if (num > 0) {
+            // Değer var → yeşil
+            cellStyle = 'background:#dcfce7;';
+            inputStyle = 'background:#bbf7d0;border-color:#22c55e;color:#166534;font-weight:700;';
+            if (!editing && !isAktifAy) readonly = 'readonly';
+          } else if (editing || isAktifAy) {
+            // Boş ama yazılabilir → kırmızı
+            cellStyle = 'background:#fee2e2;';
+            inputStyle = 'background:#fecaca;border-color:#f87171;color:#991b1b;';
+          } else {
+            // Boş + kilitli → kırmızı
+            cellStyle = 'background:#fee2e2;';
+            inputStyle = 'background:#fecaca;border-color:#f87171;color:#991b1b;';
+            readonly = 'readonly';
+          }
+          if (editing) readonly = '';
+
+          html += `<td style="padding:2px;${cellStyle}">
+            <input type="number" inputmode="decimal"
+              data-gelen-id="${k.id}" data-ay="${i}"
+              style="width:100%;border:1px solid #e2e8f0;border-radius:4px;padding:4px 2px;text-align:right;font-size:0.8rem;${inputStyle}"
+              value="${displayVal}"
+              ${readonly}
+              onchange="updateGelenAy('${k.id}', ${i}, this.value)"
+              onblur="updateGelenAy('${k.id}', ${i}, this.value)"
+              placeholder="${(editing || isAktifAy) && !num ? '0' : ''}">
+          </td>`;
+        }
+        const top = kisiGelenToplam(k);
+        const editBtnStyle = editing
+          ? 'border:1px solid #22c55e;background:#dcfce7;color:#166534;'
+          : 'border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;';
+        const editLabel = editing ? '✓' : '✎';
+        html += `<td class="num" style="background:#dbeafe;font-weight:700;color:var(--primary)">${formatMoney(top)}</td>
+          <td style="width:56px;text-align:center">
+            <button type="button" onclick="toggleGelenDuzenle('${k.id}')" title="${editing ? 'Düzenlemeyi bitir' : 'Düzenle – kutulara yaz / sil'}"
+              style="${editBtnStyle}border-radius:6px;padding:4px 7px;font-size:0.75rem;cursor:pointer;font-weight:700">${editLabel}</button>
+            <button type="button" class="del-btn" data-del="gelen" data-id="${k.id}"
+              onclick="event.preventDefault();delGelenKisi('${k.id}');" title="Sil"
+              style="min-width:36px;min-height:36px;font-size:1.1rem;">Sil</button>
+          </td>
+        </tr>`;
+      });
+
+      html += `<tr style="background:#f1f5f9;font-weight:700">
+        <td style="position:sticky;left:0;background:#f1f5f9;z-index:1">TOPLAM</td>
+        <td></td>`;
+      for (let i = 0; i < 12; i++) {
+        const ayTop = state.gelenKisiler.reduce((s, k) => s + (Number((k.aylar || {})[i]) || 0), 0);
+        html += `<td class="num">${ayTop ? formatMoney(ayTop) : '—'}</td>`;
+      }
+      html += `<td class="num" style="background:#dbeafe;color:var(--primary)">${formatMoney(totalGonderilen())}</td>
+        <td></td>
+      </tr></tbody></table>`;
+      list.innerHTML = html;
+    }
+
+    function renderMalzemeler() {
+      const list = document.getElementById('malzemeList');
+      if (state.malzemeler.length === 0) {
+        list.innerHTML = '<div class="empty">Henüz malzeme yok</div>';
+        return;
+      }
+      let html = `<table class="excel-table">
+        <thead><tr>
+          <th>Malzeme</th>
+          <th style="text-align:right">Fiyat</th>
+          <th style="text-align:right">Miktar</th>
+          <th style="text-align:right">Toplam</th>
+          <th>Durum</th>
+          <th></th>
+        </tr></thead><tbody>`;
+      state.malzemeler.forEach(m => {
+        const tutar = Number(m.fiyat) * Number(m.miktar);
+        const editing = malzemeEditMode.has(m.id);
+        if (editing) {
+          html += `<tr>
+            <td><input type="text" data-malzeme-id="${m.id}" data-field="ad"
+              value="${escape(m.ad)}"
+              style="width:100%;border:1px solid #93c5fd;border-radius:4px;padding:4px;font-size:0.85rem"
+              onchange="updateMalzemeField('${m.id}','ad',this.value)"
+              onblur="updateMalzemeField('${m.id}','ad',this.value)"></td>
+            <td><input type="number" inputmode="decimal" data-malzeme-id="${m.id}" data-field="fiyat"
+              value="${m.fiyat}"
+              style="width:100%;border:1px solid #93c5fd;border-radius:4px;padding:4px;text-align:right;font-size:0.85rem"
+              onchange="updateMalzemeField('${m.id}','fiyat',this.value)"
+              onblur="updateMalzemeField('${m.id}','fiyat',this.value)"></td>
+            <td><input type="number" inputmode="decimal" data-malzeme-id="${m.id}" data-field="miktar"
+              value="${m.miktar}"
+              style="width:100%;border:1px solid #93c5fd;border-radius:4px;padding:4px;text-align:right;font-size:0.85rem"
+              onchange="updateMalzemeField('${m.id}','miktar',this.value)"
+              onblur="updateMalzemeField('${m.id}','miktar',this.value)"></td>
+            <td class="num" style="color:var(--orange)">${formatMoney(tutar)}</td>
+            <td><span class="badge ${m.alindi === 'Evet' ? 'badge-yes' : 'badge-no'}"
+                  onclick="toggleAlindi('${m.id}')">${m.alindi === 'Evet' ? 'Alındı' : 'Bekliyor'}</span></td>
+            <td style="width:56px;text-align:center">
+              <button type="button" onclick="toggleMalzemeDuzenle('${m.id}')"
+                style="border:1px solid #22c55e;background:#dcfce7;color:#166534;border-radius:6px;padding:4px 7px;font-size:0.75rem;cursor:pointer;font-weight:700">✓</button>
+              <button type="button" class="del-btn" data-del="malzeme" data-id="${m.id}"
+              onclick="event.preventDefault();delMalzeme('${m.id}');" title="Sil"
+              style="min-width:36px;min-height:36px;font-size:1.1rem;">Sil</button>
+            </td>
+          </tr>`;
+        } else {
+          html += `<tr>
+            <td>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                <span>${escape(m.ad)}</span>
+                <button type="button" onclick="window.delMalzeme('${m.id}')" title="Sil"
+                  style="flex-shrink:0;min-width:32px;min-height:32px;border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:0.95rem;cursor:pointer;">Sil</button>
+              </div>
+            </td>
+            <td class="num">${formatMoney(m.fiyat)}</td>
+            <td class="num">${m.miktar}</td>
+            <td class="num" style="color:var(--orange)">${formatMoney(tutar)}</td>
+            <td><span class="badge ${m.alindi === 'Evet' ? 'badge-yes' : 'badge-no'}"
+                  onclick="toggleAlindi('${m.id}')">${m.alindi === 'Evet' ? 'Alındı' : 'Bekliyor'}</span></td>
+            <td style="width:40px;text-align:center">
+              <button type="button" onclick="toggleMalzemeDuzenle('${m.id}')" title="Düzenle"
+                style="border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:4px 7px;font-size:0.75rem;cursor:pointer;font-weight:700">✎</button>
+            </td>
+          </tr>`;
+        }
+      });
+      html += '</tbody></table>';
+      list.innerHTML = html;
+    }
+
+    function renderBorclar() {
+      const list = document.getElementById('borcList');
+      if (state.borcKisiler.length === 0) {
+        list.innerHTML = '<div class="empty">Henüz borçlu kişi yok. Yukarıdan ekleyin.</div>';
+        return;
+      }
+      const sortedBorc = [...state.borcKisiler].sort((a, b) =>
+        (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' })
+      );
+      const buAy = new Date().getMonth();
+      const gecenAy = (buAy + 11) % 12;
+      let html = `<table class="excel-table" style="min-width:720px">
+        <thead><tr>
+          <th style="position:sticky;left:0;background:#e2e8f0;z-index:1">Kişi</th>
+          <th style="text-align:center;width:40px">+</th>`;
+      AYLAR.forEach(a => { html += `<th style="text-align:center;min-width:52px">${a}</th>`; });
+      html += `<th style="text-align:right;background:#fef3c7">Toplam</th>
+          <th></th>
+        </tr></thead><tbody>`;
+
+      sortedBorc.forEach(k => {
+        const aylar = k.aylar || {};
+        const kid = String(k.id);
+        html += `<tr>
+          <td style="position:sticky;left:0;background:#fff;font-weight:600;z-index:1;min-width:120px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+              <span>${escape(k.ad)}</span>
+              <button type="button" onclick="window.delBorcKisi('${kid}')" title="Sil"
+                style="flex-shrink:0;min-width:32px;min-height:32px;border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:0.95rem;cursor:pointer;">Sil</button>
+            </div>
+          </td>
+          <td style="text-align:center;padding:2px">
+            <button type="button" onclick="borcAyEkle250('${kid}')"
+              title="Bu aya 250 yaz"
+              style="width:32px;height:32px;border:none;border-radius:8px;background:#16a34a;color:#fff;font-size:1.2rem;font-weight:700;cursor:pointer;line-height:1">+</button>
+          </td>`;
+        for (let i = 0; i < 12; i++) {
+          const raw = aylar[i];
+          const isPaid = raw === -1 || raw === '-1' || raw === '-' || raw === '−';
+          const num = (!isPaid && raw !== '' && raw != null) ? (Number(raw) || 0) : 0;
+          let displayVal = '';
+          if (isPaid) displayVal = '−';
+          else if (num > 0) displayVal = String(num);
+
+          let cellStyle = '';
+          let inputStyle = '';
+          if (isPaid) {
+            cellStyle = 'background:#dcfce7;';
+            inputStyle = 'background:#bbf7d0;border-color:#22c55e;color:#166534;font-weight:700;';
+          } else if (num > 0) {
+            cellStyle = 'background:#fef3c7;';
+            inputStyle = 'background:#fde68a;border-color:#f59e0b;color:#92400e;font-weight:700;';
+          } else {
+            cellStyle = 'background:#fff;';
+            inputStyle = 'background:#f8fafc;border-color:#e2e8f0;';
+          }
+
+          // Her ay kutusu elle yazılabilir
+          html += `<td style="padding:2px;${cellStyle}">
+            <input type="text" inputmode="decimal"
+              data-borc-id="${kid}" data-ay="${i}"
+              style="width:100%;border:1px solid #e2e8f0;border-radius:4px;padding:4px 2px;text-align:right;font-size:0.8rem;${inputStyle}"
+              value="${displayVal}"
+              onchange="updateBorcAy('${kid}', ${i}, this.value)"
+              onblur="updateBorcAy('${kid}', ${i}, this.value)"
+              placeholder="0">
+          </td>`;
+        }
+        const top = kisiBorcToplam(k);
+        html += `<td class="num" style="background:#fef3c7;font-weight:700;color:var(--red)">${formatMoney(top)}</td>
+          <td style="width:56px;text-align:center;white-space:nowrap">
+            <button type="button" onclick="toggleBorcDuzenle('${kid}')" title="Kaydet / yenile"
+              style="border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:4px 7px;font-size:0.75rem;cursor:pointer;font-weight:700">✎</button>
+            <button type="button" class="del-btn" data-del="borc" data-id="${kid}"
+              onclick="event.preventDefault();delBorcKisi('${kid}');" title="Sil"
+              style="min-width:36px;min-height:36px;font-size:1.1rem;">Sil</button>
+          </td>
+        </tr>`;
+      });
+
+      html += `<tr style="background:#f1f5f9;font-weight:700">
+        <td style="position:sticky;left:0;background:#f1f5f9;z-index:1">TOPLAM</td>
+        <td></td>`;
+      for (let i = 0; i < 12; i++) {
+        const ayTop = state.borcKisiler.reduce((s, k) => s + ayBorcDegeri((k.aylar || {})[i]), 0);
+        html += `<td class="num">${ayTop ? formatMoney(ayTop) : '—'}</td>`;
+      }
+      html += `<td class="num" style="background:#fef3c7;color:var(--red)">${formatMoney(totalBorc())}</td>
+        <td></td>
+      </tr></tbody></table>`;
+      list.innerHTML = html;
+    }
+
+    function openTumIslemler() {
+      const overlay = document.getElementById('tumIslemlerOverlay');
+      const sheet = document.getElementById('tumIslemlerSheet');
+      if (!overlay || !sheet) return;
+      renderTumIslemler();
+      overlay.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+      requestAnimationFrame(() => {
+        sheet.style.transform = 'translateY(0)';
+      });
+    }
+
+    function closeTumIslemler() {
+      const overlay = document.getElementById('tumIslemlerOverlay');
+      const sheet = document.getElementById('tumIslemlerSheet');
+      if (!overlay || !sheet) return;
+      sheet.style.transform = 'translateY(100%)';
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+      }, 280);
+    }
+
+    function renderTumIslemler() {
+      const box = document.getElementById('tumIslemler');
+      if (!box) return;
+      const buAy = new Date().getMonth();
+      const ayAd = AYLAR[buAy];
+
+      // --- GELEN bu ay ---
+      const verenler = [];
+      const vermeyenler = [];
+      state.gelenKisiler.forEach(k => {
+        const v = Number((k.aylar || {})[buAy]) || 0;
+        if (v > 0) verenler.push({ ad: k.ad, tutar: v });
+        else vermeyenler.push({ ad: k.ad });
+      });
+      // Kişilerde olup gelende olmayanlar da vermeyen
+      state.kisiler.forEach(k => {
+        if (!state.gelenKisiler.some(g => g.ad === k.ad) &&
+            !vermeyenler.some(v => v.ad === k.ad) &&
+            !verenler.some(v => v.ad === k.ad)) {
+          vermeyenler.push({ ad: k.ad });
+        }
+      });
+
+      // --- BORÇ bu ay ---
+      const borclu = [];
+      const borcOdendi = [];
+      state.borcKisiler.forEach(k => {
+        const raw = (k.aylar || {})[buAy];
+        const isPaid = raw === -1 || raw === '-1' || raw === '-';
+        const tutar = ayBorcDegeri(raw);
+        if (isPaid) borcOdendi.push({ ad: k.ad });
+        else borclu.push({ ad: k.ad, tutar });
+      });
+
+      // --- MALZEME ---
+      const alinan = state.malzemeler.filter(m => m.alindi === 'Evet');
+      const bekleyen = state.malzemeler.filter(m => m.alindi !== 'Evet');
+
+      let html = '';
+
+      // Başlık özet kartları
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div style="background:#dcfce7;border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:0.7rem;color:#166534">Bu ay veren (${ayAd})</div>
+          <div style="font-size:1.2rem;font-weight:800;color:#16a34a">${verenler.length}</div>
+        </div>
+        <div style="background:#fee2e2;border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:0.7rem;color:#991b1b">Bu ay vermeyen</div>
+          <div style="font-size:1.2rem;font-weight:800;color:#dc2626">${vermeyenler.length}</div>
+        </div>
+        <div style="background:#fef3c7;border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:0.7rem;color:#92400e">Borçlu (bu ay)</div>
+          <div style="font-size:1.2rem;font-weight:800;color:#d97706">${borclu.length}</div>
+        </div>
+        <div style="background:#e0e7ff;border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:0.7rem;color:#3730a3">Alınan malzeme</div>
+          <div style="font-size:1.2rem;font-weight:800;color:#4f46e5">${alinan.length} / ${state.malzemeler.length}</div>
+        </div>
+      </div>`;
+
+      // Verenler tablosu
+      html += `<h3 style="font-size:0.9rem;margin:12px 0 6px;color:#166534">✅ Gelen / Verenler (${ayAd})</h3>`;
+      if (verenler.length === 0) {
+        html += `<div class="empty">Bu ay henüz gelen yok</div>`;
+      } else {
+        html += `<table class="excel-table"><thead><tr><th>Kişi</th><th style="text-align:right">Tutar</th><th>Durum</th></tr></thead><tbody>`;
+        verenler.sort((a,b) => a.ad.localeCompare(b.ad,'tr')).forEach(v => {
+          html += `<tr><td>${escape(v.ad)}</td><td class="num" style="color:var(--primary)">${formatMoney(v.tutar)}</td><td><span class="badge badge-yes">Verdi</span></td></tr>`;
+        });
+        const topV = verenler.reduce((s,v) => s + v.tutar, 0);
+        html += `<tr style="font-weight:700;background:#f1f5f9"><td>TOPLAM</td><td class="num">${formatMoney(topV)}</td><td></td></tr>`;
+        html += `</tbody></table>`;
+      }
+
+      // Vermeyenler
+      html += `<h3 style="font-size:0.9rem;margin:12px 0 6px;color:#991b1b">❌ Vermeyenler (${ayAd})</h3>`;
+      if (vermeyenler.length === 0) {
+        html += `<div class="empty">Herkes vermiş 👍</div>`;
+      } else {
+        html += `<table class="excel-table"><thead><tr><th>Kişi</th><th>Durum</th></tr></thead><tbody>`;
+        vermeyenler.sort((a,b) => a.ad.localeCompare(b.ad,'tr')).forEach(v => {
+          html += `<tr><td>${escape(v.ad)}</td><td><span class="badge badge-no">Vermedi</span></td></tr>`;
+        });
+        html += `</tbody></table>`;
+      }
+
+      // Borçlular
+      html += `<h3 style="font-size:0.9rem;margin:12px 0 6px;color:#92400e">💳 Eski Borç – Bu ay</h3>`;
+      if (borclu.length === 0 && borcOdendi.length === 0) {
+        html += `<div class="empty">Borç kaydı yok</div>`;
+      } else {
+        html += `<table class="excel-table"><thead><tr><th>Kişi</th><th style="text-align:right">Tutar</th><th>Durum</th></tr></thead><tbody>`;
+        borclu.sort((a,b) => a.ad.localeCompare(b.ad,'tr')).forEach(b => {
+          html += `<tr><td>${escape(b.ad)}</td><td class="num" style="color:var(--red)">${formatMoney(b.tutar)}</td><td><span class="badge badge-no">Borçlu</span></td></tr>`;
+        });
+        borcOdendi.sort((a,b) => a.ad.localeCompare(b.ad,'tr')).forEach(b => {
+          html += `<tr><td>${escape(b.ad)}</td><td class="num">—</td><td><span class="badge badge-yes">Ödendi</span></td></tr>`;
+        });
+        const topB = borclu.reduce((s,b) => s + b.tutar, 0);
+        html += `<tr style="font-weight:700;background:#f1f5f9"><td>TOPLAM BORÇ</td><td class="num" style="color:var(--red)">${formatMoney(topB)}</td><td></td></tr>`;
+        html += `</tbody></table>`;
+      }
+
+      // Malzemeler
+      html += `<h3 style="font-size:0.9rem;margin:12px 0 6px;color:#4f46e5">🛒 Malzemeler</h3>`;
+      if (state.malzemeler.length === 0) {
+        html += `<div class="empty">Malzeme yok</div>`;
+      } else {
+        html += `<table class="excel-table"><thead><tr><th>Malzeme</th><th style="text-align:right">Tutar</th><th>Durum</th></tr></thead><tbody>`;
+        [...alinan, ...bekleyen].forEach(m => {
+          const tutar = Number(m.fiyat) * Number(m.miktar);
+          const ok = m.alindi === 'Evet';
+          html += `<tr>
+            <td>${escape(m.ad)}</td>
+            <td class="num" style="color:var(--orange)">${formatMoney(tutar)}</td>
+            <td><span class="badge ${ok ? 'badge-yes' : 'badge-no'}">${ok ? 'Alındı' : 'Bekliyor'}</span></td>
+          </tr>`;
+        });
+        const topM = state.malzemeler.reduce((s,m) => s + Number(m.fiyat)*Number(m.miktar), 0);
+        const topAlinan = alinan.reduce((s,m) => s + Number(m.fiyat)*Number(m.miktar), 0);
+        html += `<tr style="font-weight:700;background:#f1f5f9"><td>TOPLAM</td><td class="num">${formatMoney(topM)}</td><td>Alınan: ${formatMoney(topAlinan)}</td></tr>`;
+        html += `</tbody></table>`;
+      }
+
+      // Genel kalan
+      html += `<div style="margin-top:14px;padding:12px;background:#f0fdf4;border-radius:12px;border:1px solid #bbf7d0;text-align:center">
+        <div style="font-size:0.75rem;color:#166534">KALAN PARA</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#16a34a">${formatMoney(kalan())}</div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">
+          Bütçe ${formatMoney(state.butce)} − Gelen ${formatMoney(totalGonderilen())} − Gider ${formatMoney(totalGider())} − Borç ${formatMoney(totalBorc())}
+        </div>
+      </div>`;
+
+      box.innerHTML = html;
+    }
+
+    function refreshAll() {
+      updateSummary();
+      renderKisiler();
+      fillGelenKisiSelect();
+      fillBorcKisiSelect();
+      renderGonderimler();
+      renderMalzemeler();
+      renderBorclar();
+      renderTumIslemler();
+    }
+
+    // --- İşlemler ---
+    function saveButce() {
+      state.butce = parseFloat(document.getElementById('butceInput').value) || 0;
+      save();
+      updateSummary();
+      showToast('Bütçe kaydedildi');
+    }
+
+    function addKisi() {
+      const ad = document.getElementById('kisiAd').value.trim();
+      if (!ad) { showToast('Ad girin'); return; }
+      state.kisiler.push({
+        id: uid(),
+        ad,
+        not: document.getElementById('kisiNot').value.trim()
+      });
+      document.getElementById('kisiAd').value = '';
+      document.getElementById('kisiNot').value = '';
+      save();
+      refreshAll();
+      showToast('Kişi eklendi');
+    }
+
+    function delKisi(id) {
+      id = String(id || '');
+      if (!id) { showToast('Silinemedi'); return; }
+      const k = state.kisiler.find(x => String(x.id) === id);
+      if (!k) { showToast('Kişi bulunamadı'); return; }
+      const ad = k.ad;
+      const gelenBag = state.gelenKisiler.filter(g => g.ad === ad).map(g => JSON.parse(JSON.stringify(g)));
+      const borcBag = state.borcKisiler.filter(b => b.ad === ad).map(b => JSON.parse(JSON.stringify(b)));
+      lastDeleted = {
+        type: 'kisi',
+        items: {
+          kisiler: [JSON.parse(JSON.stringify(k))],
+          gelen: gelenBag,
+          borc: borcBag
+        }
+      };
+      state.kisiler = state.kisiler.filter(x => String(x.id) !== id);
+      state.gelenKisiler = state.gelenKisiler.filter(g => g.ad !== ad);
+      state.borcKisiler = state.borcKisiler.filter(b => b.ad !== ad);
+      save();
+      refreshAll();
+      showToast((ad || 'Kişi') + ' silindi', true);
+    }
+
+    // --- GELEN (12 aylık) ---
+    function fillGelenKisiSelect() {
+      const sel = document.getElementById('gelenKisiSec');
+      if (!sel) return;
+      const sorted = [...state.kisiler].sort((a, b) =>
+        (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' })
+      );
+      let opts = '<option value="">— Kişi seçin —</option>';
+      sorted.forEach(k => {
+        const already = state.gelenKisiler.some(g => g.ad === k.ad);
+        opts += `<option value="${k.id}" ${already ? 'disabled' : ''}>${escape(k.ad)}${already ? ' (ekli)' : ''}</option>`;
+      });
+      sel.innerHTML = opts;
+    }
+
+    function addGelenKisi() {
+      try {
+        const sel = document.getElementById('gelenKisiSec');
+        const secilenId = sel ? sel.value : '';
+        const yazilan = ((document.getElementById('gelenAd') || {}).value || '').trim();
+        let isim = yazilan;
+        if (secilenId) {
+          const kisi = state.kisiler.find(k => k.id === secilenId);
+          if (kisi) isim = kisi.ad;
+        }
+        isim = (isim || '').trim();
+        if (!isim) { showToast('Kişi seçin veya isim yazın'); return; }
+        if (state.gelenKisiler.some(k => k.ad === isim)) {
+          showToast('Bu kişi zaten gelen listesinde');
+          return;
+        }
+        const aylar = {};
+        for (let i = 0; i < 12; i++) aylar[i] = '';
+        state.gelenKisiler.push({ id: uid(), ad: isim, aylar });
+        if (!state.kisiler.some(k => k.ad === isim)) {
+          state.kisiler.push({ id: uid(), ad: isim, not: '' });
+        }
+        if (document.getElementById('gelenAd')) document.getElementById('gelenAd').value = '';
+        if (sel) sel.value = '';
+        save();
+        refreshAll();
+        showToast('Kişi eklendi');
+      } catch (e) {
+        console.error(e);
+        showToast('Ekleme hatası');
+      }
+    }
+
+    function updateGelenAy(kisiId, ayIndex, value) {
+      const k = state.gelenKisiler.find(x => x.id === kisiId);
+      if (!k) return;
+      if (!k.aylar) k.aylar = {};
+      const v = String(value == null ? '' : value).trim().replace(',', '.');
+      if (v === '' || v === '-') {
+        k.aylar[ayIndex] = '';
+      } else {
+        const n = parseFloat(v);
+        k.aylar[ayIndex] = isNaN(n) ? '' : n;
+      }
+      syncBorcFromGelen(k.ad, ayIndex, k.aylar[ayIndex]);
+      save();
+      updateSummary();
+      renderTumIslemler();
+    }
+
+    // Satırdaki tüm inputları state'e yaz (düzenleme kapanırken)
+    function harvestGelenRow(kisiId) {
+      const k = state.gelenKisiler.find(x => x.id === kisiId);
+      if (!k) return;
+      if (!k.aylar) k.aylar = {};
+      const inputs = document.querySelectorAll(`input[data-gelen-id="${kisiId}"]`);
+      inputs.forEach(inp => {
+        const ay = parseInt(inp.getAttribute('data-ay'), 10);
+        if (isNaN(ay)) return;
+        const v = String(inp.value || '').trim().replace(',', '.');
+        if (v === '') k.aylar[ay] = '';
+        else {
+          const n = parseFloat(v);
+          k.aylar[ay] = isNaN(n) ? '' : n;
+        }
+        syncBorcFromGelen(k.ad, ay, k.aylar[ay]);
+      });
+      save();
+      updateSummary();
+    }
+
+    function gelenAyEkle250(kisiId) {
+      const k = state.gelenKisiler.find(x => x.id === kisiId);
+      if (!k) return;
+      if (!k.aylar) k.aylar = {};
+      const buAy = new Date().getMonth();
+      // + basınca bu aya yeşil 250 yaz (üzerine yazar)
+      k.aylar[buAy] = 250;
+      syncBorcFromGelen(k.ad, buAy, 250);
+      save();
+      updateSummary();
+      renderGonderimler();
+      renderBorclar();
+      showToast(AYLAR[buAy] + ' → 250 ₺ (yeşil)');
+    }
+
+    function toggleGelenDuzenle(kisiId) {
+      if (gelenEditMode.has(kisiId)) {
+        // Kapatmadan önce kutulardaki değerleri kaydet
+        harvestGelenRow(kisiId);
+        gelenEditMode.delete(kisiId);
+        showToast('Kaydedildi');
+      } else {
+        gelenEditMode.add(kisiId);
+        showToast('Düzenleme açık – yazın, bitince ✓ basın');
+      }
+      renderGonderimler();
+      renderBorclar();
+    }
+
+    function syncBorcFromGelen(ad, ayIndex, gelenTutar) {
+      let borcK = state.borcKisiler.find(b => b.ad === ad);
+      if (!borcK) {
+        const aylar = {};
+        for (let i = 0; i < 12; i++) aylar[i] = '';
+        borcK = { id: uid(), ad, aylar };
+        state.borcKisiler.push(borcK);
+      }
+      if (!borcK.aylar) borcK.aylar = {};
+      // Gelen tutarı varsa o ay ödendi (-)
+      if (Number(gelenTutar) > 0) {
+        borcK.aylar[ayIndex] = -1;
+      } else if (borcK.aylar[ayIndex] === -1) {
+        borcK.aylar[ayIndex] = ''; // geri al
+      }
+    }
+
+    function delGelenKisi(id) {
+      id = String(id || '');
+      if (!id) { showToast('Silinemedi'); return; }
+      const k = state.gelenKisiler.find(x => String(x.id) === id);
+      if (!k) { showToast('Kayıt bulunamadı'); return; }
+      lastDeleted = { type: 'gelen', items: [JSON.parse(JSON.stringify(k))] };
+      state.gelenKisiler = state.gelenKisiler.filter(x => String(x.id) !== id);
+      save();
+      refreshAll();
+      showToast((k.ad || 'Kayıt') + ' silindi', true);
+    }
+
+    function addMalzeme() {
+      const ad = document.getElementById('malzemeAd').value.trim();
+      const fiyat = parseFloat(document.getElementById('malzemeFiyat').value) || 0;
+      const miktar = parseFloat(document.getElementById('malzemeMiktar').value) || 1;
+      if (!ad) { showToast('Malzeme adı girin'); return; }
+      state.malzemeler.push({
+        id: uid(),
+        ad,
+        fiyat,
+        miktar,
+        alindi: document.getElementById('malzemeAlindi').value
+      });
+      document.getElementById('malzemeAd').value = '';
+      document.getElementById('malzemeFiyat').value = '';
+      document.getElementById('malzemeMiktar').value = '';
+      document.getElementById('malzemeAlindi').value = 'Hayır';
+      save();
+      refreshAll();
+      showToast('Malzeme eklendi');
+    }
+
+    function toggleAlindi(id) {
+      const m = state.malzemeler.find(x => x.id === id);
+      if (m) {
+        m.alindi = m.alindi === 'Evet' ? 'Hayır' : 'Evet';
+        save();
+        refreshAll();
+        showToast(m.alindi === 'Evet' ? 'Alındı olarak işaretlendi' : 'Bekliyor');
+      }
+    }
+
+    function delMalzeme(id) {
+      id = String(id || '');
+      if (!id) { showToast('Silinemedi'); return; }
+      const m = state.malzemeler.find(x => String(x.id) === id);
+      if (!m) { showToast('Kayıt bulunamadı'); return; }
+      lastDeleted = { type: 'malzeme', items: [JSON.parse(JSON.stringify(m))] };
+      state.malzemeler = state.malzemeler.filter(x => String(x.id) !== id);
+      save();
+      refreshAll();
+      showToast((m.ad || 'Malzeme') + ' silindi', true);
+    }
+
+    // --- BORÇ (12 aylık tablo) ---
+    function fillBorcKisiSelect() {
+      const sel = document.getElementById('borcKisiSec');
+      if (!sel) return;
+      const sorted = [...state.kisiler].sort((a, b) =>
+        (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' })
+      );
+      let opts = '<option value="">— Kişi seçin —</option>';
+      sorted.forEach(k => {
+        const already = state.borcKisiler.some(b => b.ad === k.ad);
+        opts += `<option value="${k.id}" ${already ? 'disabled' : ''}>${escape(k.ad)}${already ? ' (ekli)' : ''}</option>`;
+      });
+      sel.innerHTML = opts;
+    }
+
+    function addBorcKisi() {
+      try {
+        const sel = document.getElementById('borcKisiSec');
+        const secilenId = sel ? sel.value : '';
+        const yazilan = ((document.getElementById('borcAd') || {}).value || '').trim();
+        let isim = yazilan;
+        if (secilenId) {
+          const kisi = state.kisiler.find(k => k.id === secilenId);
+          if (kisi) isim = kisi.ad;
+        }
+        isim = (isim || '').trim();
+        if (!isim) { showToast('Kişi seçin veya isim yazın'); return; }
+        if (state.borcKisiler.some(k => k.ad === isim)) {
+          showToast('Bu kişi zaten borç listesinde');
+          return;
+        }
+        const aylar = {};
+        for (let i = 0; i < 12; i++) aylar[i] = '';
+        state.borcKisiler.push({ id: uid(), ad: isim, aylar });
+        if (!state.kisiler.some(k => k.ad === isim)) {
+          state.kisiler.push({ id: uid(), ad: isim, not: '' });
+        }
+        if (document.getElementById('borcAd')) document.getElementById('borcAd').value = '';
+        if (sel) sel.value = '';
+        save();
+        refreshAll();
+        showToast('Kişi eklendi – aylara tutar yazın');
+      } catch (e) {
+        console.error(e);
+        showToast('Ekleme hatası');
+      }
+    }
+
+    function borcAyEkle250(kisiId) {
+      kisiId = String(kisiId);
+      const k = state.borcKisiler.find(x => String(x.id) === kisiId);
+      if (!k) return;
+      if (!k.aylar) k.aylar = {};
+      const buAy = new Date().getMonth();
+      k.aylar[buAy] = 250;
+      save();
+      updateSummary();
+      renderBorclar();
+      renderTumIslemler();
+      showToast(AYLAR[buAy] + ' → 250 ₺');
+    }
+
+    function updateBorcAy(kisiId, ayIndex, value) {
+      kisiId = String(kisiId);
+      const k = state.borcKisiler.find(x => String(x.id) === kisiId);
+      if (!k) return;
+      if (!k.aylar) k.aylar = {};
+      const v = String(value == null ? '' : value).trim().replace(',', '.');
+      if (v === '-' || v === '−') {
+        k.aylar[ayIndex] = -1; // ödendi
+      } else if (v === '') {
+        k.aylar[ayIndex] = '';
+      } else {
+        const n = parseFloat(v);
+        k.aylar[ayIndex] = isNaN(n) ? '' : n;
+      }
+      save();
+      updateSummary();
+      // Toplamları güncelle (tabloyu komple çizmeden)
+      renderTumIslemler();
+    }
+
+    function harvestBorcRow(kisiId) {
+      kisiId = String(kisiId);
+      const k = state.borcKisiler.find(x => String(x.id) === kisiId);
+      if (!k) return;
+      if (!k.aylar) k.aylar = {};
+      document.querySelectorAll(`input[data-borc-id="${kisiId}"]`).forEach(inp => {
+        const ay = parseInt(inp.getAttribute('data-ay'), 10);
+        if (isNaN(ay)) return;
+        const v = String(inp.value || '').trim().replace(',', '.');
+        if (v === '-' || v === '−') k.aylar[ay] = -1;
+        else if (v === '') k.aylar[ay] = '';
+        else {
+          const n = parseFloat(v);
+          k.aylar[ay] = isNaN(n) ? '' : n;
+        }
+      });
+      save();
+      updateSummary();
+      renderTumIslemler();
+    }
+
+    function toggleBorcDuzenle(kisiId) {
+      kisiId = String(kisiId);
+      // Elle girilen tüm fiyatları kaydet ve tabloyu yenile (toplamlar güncellenir)
+      harvestBorcRow(kisiId);
+      renderBorclar();
+      showToast('Borç kaydedildi · toplamlar güncellendi');
+    }
+
+    function updateMalzemeField(id, field, value) {
+      const m = state.malzemeler.find(x => x.id === id);
+      if (!m) return;
+      if (field === 'ad') m.ad = String(value || '').trim() || m.ad;
+      else if (field === 'fiyat') m.fiyat = parseFloat(String(value).replace(',', '.')) || 0;
+      else if (field === 'miktar') m.miktar = parseFloat(String(value).replace(',', '.')) || 1;
+      save();
+      updateSummary();
+      renderTumIslemler();
+    }
+
+    function harvestMalzemeRow(id) {
+      const m = state.malzemeler.find(x => x.id === id);
+      if (!m) return;
+      document.querySelectorAll(`input[data-malzeme-id="${id}"]`).forEach(inp => {
+        const field = inp.getAttribute('data-field');
+        updateMalzemeField(id, field, inp.value);
+      });
+      save();
+      updateSummary();
+    }
+
+    function toggleMalzemeDuzenle(id) {
+      if (malzemeEditMode.has(id)) {
+        harvestMalzemeRow(id);
+        malzemeEditMode.delete(id);
+        showToast('Malzeme kaydedildi');
+      } else {
+        malzemeEditMode.add(id);
+        showToast('Düzenleme açık – yazın, bitince ✓');
+      }
+      renderMalzemeler();
+    }
+
+    function delBorcKisi(id) {
+      id = String(id || '');
+      if (!id) { showToast('Silinemedi'); return; }
+      const k = state.borcKisiler.find(x => String(x.id) === id);
+      if (!k) { showToast('Kayıt bulunamadı'); return; }
+      lastDeleted = { type: 'borc', items: [JSON.parse(JSON.stringify(k))] };
+      state.borcKisiler = state.borcKisiler.filter(x => String(x.id) !== id);
+      save();
+      refreshAll();
+      showToast((k.ad || 'Kayıt') + ' silindi', true);
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+      document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+      document.getElementById('panel-' + name).style.display = 'block';
+    }
+
+    function clearAll() {
+      if (!confirm('Tüm veriler silinecek. Emin misiniz?')) return;
+      state = { butce: 0, kisiler: [], gelenKisiler: [], malzemeler: [], borcKisiler: [] };
+      save();
+      refreshAll();
+      showToast('Tüm veriler temizlendi');
+    }
+
+    function exportExcel() {
+      let csv = '\uFEFF';
+      csv += 'ÖZET\n';
+      csv += `Toplam Bütçe;${state.butce}\n`;
+      csv += `Toplam Gelen;${totalGonderilen()}\n`;
+      csv += `Toplam Gider (Alınan);${totalGider()}\n`;
+      csv += `Toplam Eski Borç (Ödenmeyen);${totalBorc()}\n`;
+      csv += `Kalan Para;${kalan()}\n\n`;
+
+      csv += 'KİŞİLER\nAd Soyad;Not;Toplam Gelen\n';
+      state.kisiler.forEach(k => {
+        const gelenK = state.gelenKisiler.find(g => g.ad === k.ad);
+        const top = gelenK ? kisiGelenToplam(gelenK) : 0;
+        csv += `"${k.ad}";"${k.not || ''}";${top}\n`;
+      });
+      csv += '\n';
+
+      csv += 'GELEN (12 Ay)\nKişi;Oca;Şub;Mar;Nis;May;Haz;Tem;Ağu;Eyl;Eki;Kas;Ara;Toplam\n';
+      state.gelenKisiler.forEach(k => {
+        const aylar = k.aylar || {};
+        let row = `"${k.ad}"`;
+        for (let i = 0; i < 12; i++) row += `;${aylar[i] || 0}`;
+        row += `;${kisiGelenToplam(k)}\n`;
+        csv += row;
+      });
+      csv += '\n';
+
+      csv += 'MALZEMELER\nMalzeme;Birim Fiyat;Miktar;Alındı mı?;Toplam Maliyet\n';
+      state.malzemeler.forEach(m => {
+        csv += `"${m.ad}";${m.fiyat};${m.miktar};${m.alindi};${Number(m.fiyat)*Number(m.miktar)}\n`;
+      });
+      csv += '\n';
+
+      csv += 'ESKİ BORÇLAR (12 Ay)\nKişi;Oca;Şub;Mar;Nis;May;Haz;Tem;Ağu;Eyl;Eki;Kas;Ara;Toplam\n';
+      state.borcKisiler.forEach(k => {
+        const aylar = k.aylar || {};
+        let row = `"${k.ad}"`;
+        for (let i = 0; i < 12; i++) {
+          const raw = aylar[i];
+          if (raw === -1 || raw === '-1') row += ';-';
+          else if (raw === '' || raw === null || raw === undefined) row += ';250';
+          else row += `;${raw}`;
+        }
+        row += `;${kisiBorcToplam(k)}\n`;
+        csv += row;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kisi-malzeme-butce-${today()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Excel (CSV) indirildi');
+    }
+
+    function importExcel(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          let text = e.target.result;
+          // BOM temizle
+          if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+          const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+
+          // Basit bölüm ayrıştırma
+          let section = '';
+          const newState = {
+            butce: state.butce,
+            kisiler: [],
+            gelenKisiler: [],
+            malzemeler: [],
+            borcKisiler: []
+          };
+
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const up = line.toUpperCase();
+
+            if (up.startsWith('ÖZET') || up === 'OZET') { section = 'ozet'; continue; }
+            if (up.startsWith('KİŞİLER') || up.startsWith('KISILER')) { section = 'kisiler'; continue; }
+            if (up.startsWith('GELEN') || up.startsWith('GÖNDERİMLER') || up.startsWith('GONDERIMLER')) { section = 'gelen'; continue; }
+            if (up.startsWith('MALZEMELER')) { section = 'malzeme'; continue; }
+            if (up.startsWith('ESKİ BORÇ') || up.startsWith('ESKI BORC')) { section = 'borc'; continue; }
+
+            // Başlık satırlarını atla
+            if (line.includes('Ad Soyad') || line.includes('Tarih;Kişi') || line.includes('Malzeme;') || line.includes('Kişi;Oca') || line.startsWith('Toplam ')) {
+              // Özetten bütçe çek
+              if (section === 'ozet' && (line.startsWith('Toplam Bütçe') || line.startsWith('Toplam Butce'))) {
+                const parts = line.split(';');
+                if (parts[1]) newState.butce = parseFloat(parts[1].replace(/[^\d.,-]/g, '').replace(',', '.')) || newState.butce;
+              }
+              continue;
+            }
+
+            const cols = line.split(';').map(c => c.replace(/^"|"$/g, '').trim());
+
+            if (section === 'ozet') {
+              if (cols[0] && cols[0].includes('Bütçe') || cols[0] && cols[0].includes('Butce')) {
+                newState.butce = parseFloat(String(cols[1] || '').replace(/[^\d.,-]/g, '').replace(',', '.')) || newState.butce;
+              }
+            }
+            else if (section === 'kisiler' && cols[0] && cols[0] !== 'Ad Soyad') {
+              newState.kisiler.push({
+                id: uid(),
+                ad: cols[0],
+                not: cols[1] || ''
+              });
+            }
+            else if (section === 'gelen' && cols[0] && cols[0] !== 'Kişi' && cols[0] !== 'Tarih') {
+              // 12 ay format: Kişi;Oca;Şub;...;Ara;Toplam
+              if (cols.length >= 13) {
+                const aylar = {};
+                for (let m = 0; m < 12; m++) {
+                  aylar[m] = parseFloat(String(cols[m + 1] || '0').replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+                }
+                newState.gelenKisiler.push({ id: uid(), ad: cols[0], aylar });
+              }
+            }
+            else if (section === 'malzeme' && cols[0] && cols[0] !== 'Malzeme') {
+              newState.malzemeler.push({
+                id: uid(),
+                ad: cols[0],
+                fiyat: parseFloat(String(cols[1] || '0').replace(/[^\d.,-]/g, '').replace(',', '.')) || 0,
+                miktar: parseFloat(String(cols[2] || '1').replace(/[^\d.,-]/g, '').replace(',', '.')) || 1,
+                alindi: (cols[3] || 'Hayır').includes('Evet') ? 'Evet' : 'Hayır'
+              });
+            }
+            else if (section === 'borc' && cols[0] && cols[0] !== 'Kişi') {
+              const aylar = {};
+              for (let m = 0; m < 12; m++) {
+                aylar[m] = parseFloat(String(cols[m + 1] || '0').replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+              }
+              newState.borcKisiler.push({
+                id: uid(),
+                ad: cols[0],
+                aylar
+              });
+            }
+          }
+
+          if (!confirm('Mevcut verilerin üzerine yüklensin mi?')) {
+            event.target.value = '';
+            return;
+          }
+          state = newState;
+          save();
+          refreshAll();
+          showToast('Excel dosyası yüklendi');
+        } catch (err) {
+          console.error(err);
+          showToast('Yükleme hatası – CSV formatını kontrol edin');
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    // Mobil / WebView için fonksiyonları global yap
+    window.addKisi = addKisi;
+    window.delKisi = delKisi;
+    window.addGelenKisi = addGelenKisi;
+    window.delGelenKisi = delGelenKisi;
+    window.gelenAyEkle250 = gelenAyEkle250;
+    window.toggleGelenDuzenle = toggleGelenDuzenle;
+    window.updateGelenAy = updateGelenAy;
+    window.addBorcKisi = addBorcKisi;
+    window.delBorcKisi = delBorcKisi;
+    window.updateBorcAy = updateBorcAy;
+    window.addMalzeme = addMalzeme;
+    window.delMalzeme = delMalzeme;
+    window.toggleAlindi = toggleAlindi;
+    window.toggleMalzemeDuzenle = toggleMalzemeDuzenle;
+    window.updateMalzemeField = updateMalzemeField;
+    window.toggleBorcDuzenle = toggleBorcDuzenle;
+    window.updateBorcAy = updateBorcAy;
+    window.borcAyEkle250 = borcAyEkle250;
+    window.addBorcKisi = addBorcKisi;
+    window.delBorcKisi = delBorcKisi;
+    window.saveButce = saveButce;
+    window.exportExcel = exportExcel;
+    window.importExcel = importExcel;
+    window.clearAll = clearAll;
+    window.switchTab = switchTab;
+    window.openTumIslemler = openTumIslemler;
+    window.closeTumIslemler = closeTumIslemler;
+    window.renderTumIslemler = renderTumIslemler;
+
+    // Overlay boşluğuna tıklayınca kapat
+    document.addEventListener('click', function(ev) {
+      const overlay = document.getElementById('tumIslemlerOverlay');
+      if (overlay && ev.target === overlay) closeTumIslemler();
+    });
+
+
+    // Çöp kutusu – event delegation (mobilde daha güvenilir)
+    document.addEventListener('click', function(ev) {
+      let t = ev.target;
+      if (t && t.nodeType === 3) t = t.parentElement; // emoji text node
+      const btn = (t && t.closest) ? t.closest('[data-del]') : null;
+      if (!btn) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const tip = btn.getAttribute('data-del');
+      const id = btn.getAttribute('data-id');
+      if (!tip || !id) return;
+      if (tip === 'kisi') delKisi(id);
+      else if (tip === 'gelen') delGelenKisi(id);
+      else if (tip === 'malzeme') delMalzeme(id);
+      else if (tip === 'borc') delBorcKisi(id);
+    }, true);
+
+    function toggleButcePanel() {
+      const panel = document.getElementById('butcePanel');
+      const ok = document.getElementById('butceOk');
+      if (!panel) return;
+      const open = panel.style.display !== 'none';
+      panel.style.display = open ? 'none' : 'block';
+      if (ok) ok.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+    window.toggleButcePanel = toggleButcePanel;
+
+    window.undoDelete = undoDelete;
+    // Başlat
+    load();
+    refreshAll();
+  </script>
+</body>
+</html>
