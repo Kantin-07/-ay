@@ -503,7 +503,7 @@
       <button class="btn btn-outline" onclick="document.getElementById('excelFile').click()">Excel’den Yükle</button>
       <input type="file" id="excelFile" accept=".csv,text/csv" style="display:none" onchange="importExcel(event)" />
     </div>
-    <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Önce “Excel’e Aktar” ile indirip düzenleyin, sonra “Excel’den Yükle” ile geri yükleyin (CSV dosyası).</p>
+    <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">“Excel’e Aktar” ile kalem kalem düzenli CSV indirilir. Düzenledikten sonra “Excel’den Yükle” ile geri yükleyebilirsiniz.</p>
   </div>
 
   <div id="toast"></div>
@@ -1553,30 +1553,43 @@
     function exportExcel() {
       let csv = '\uFEFF';
 
-      // ========== 0. ÖZET ==========
-      csv += '=== ÖZET ===\n';
-      csv += 'Kalem;Tutar\n';
-      csv += `Toplam Bütçe;${state.butce}\n`;
-      csv += `Toplam Gelen;${totalGonderilen()}\n`;
-      csv += `Toplam Gider (Alınan);${totalGider()}\n`;
-      csv += `Toplam Eski Borç (Ödenmeyen);${totalBorc()}\n`;
+      // ========== BAŞLIK ==========
+      csv += 'KİŞİ & MALZEME BÜTÇE TAKİP\n';
+      csv += 'Gönderilen paralar ve malzeme giderleri toplamları • Kalan bütçe\n';
+      csv += `Dışa Aktarım Tarihi;${today()}\n`;
+      csv += '\n';
+
+      // ========== 0. ANA SAYFA / ÖZET ==========
+      csv += '=== ANA SAYFA / ÖZET ===\n';
+      csv += 'Kalem;Tutar (₺)\n';
+      csv += `Toplam Başlangıç Bütçesi;${state.butce}\n`;
+      csv += `Toplam Gelen (Gönderilen);${totalGonderilen()}\n`;
+      csv += `Toplam Gider (Alınanlar);${totalGider()}\n`;
+      csv += `Bekleyen Gider (Tahmini);${state.malzemeler.filter(m => m.alindi !== 'Evet').reduce((s, m) => s + (Number(m.fiyat) * Number(m.miktar)), 0)}\n`;
+      csv += `Toplam Eski Borç (Alacak);${totalBorc()}\n`;
       csv += `Elimizdeki Para (Kalan);${kalan()}\n`;
+      csv += '\n';
+      csv += `Kişi sayısı;${state.kisiler.length}\n`;
+      csv += `Malzeme kalemi;${state.malzemeler.length}\n`;
+      csv += `Alınan malzeme;${state.malzemeler.filter(m => m.alindi === 'Evet').length}\n`;
+      csv += `Bekleyen malzeme;${state.malzemeler.filter(m => m.alindi !== 'Evet').length}\n`;
       csv += '\n';
 
       // ========== 1. KİŞİLER ==========
       csv += '=== 1. KİŞİLER ===\n';
-      csv += 'Ad Soyad;Not;Toplam Gelen;Toplam Alacak\n';
+      csv += 'No;Ad Soyad;Toplam Gelen (₺);Toplam Alacak (₺);Notlar\n';
       const sortedKisiler = [...state.kisiler].sort((a, b) => (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' }));
-      sortedKisiler.forEach(k => {
+      sortedKisiler.forEach((k, idx) => {
         const gelenK = state.gelenKisiler.find(g => g.ad === k.ad);
         const borcK = state.borcKisiler.find(b => b.ad === k.ad);
         const topGelen = gelenK ? kisiGelenToplam(gelenK) : 0;
         const topBorc = borcK ? kisiBorcToplam(borcK) : 0;
-        csv += `"${k.ad}";"${k.not || ''}";${topGelen};${topBorc}\n`;
+        csv += `${idx + 1};"${k.ad}";${topGelen};${topBorc};"${k.not || ''}"\n`;
       });
+      csv += `TOPLAM;;${totalGonderilen()};${totalBorc()};\n`;
       csv += '\n';
 
-      // ========== 2. GELEN ÖZET (12 Ay) ==========
+      // ========== 2. GELEN - ÖZET (12 Ay) ==========
       csv += '=== 2. GELEN - ÖZET (12 Ay) ===\n';
       csv += 'Kişi;Oca;Şub;Mar;Nis;May;Haz;Tem;Ağu;Eyl;Eki;Kas;Ara;Toplam\n';
       const sortedGelen = [...state.gelenKisiler].sort((a, b) => (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' }));
@@ -1590,7 +1603,6 @@
         row += `;${kisiGelenToplam(k)}\n`;
         csv += row;
       });
-      // Toplam satırı
       let toplamRow = 'TOPLAM';
       for (let i = 0; i < 12; i++) {
         const ayTop = state.gelenKisiler.reduce((s, k) => s + (Number((k.aylar || {})[i]) || 0), 0);
@@ -1600,9 +1612,9 @@
       csv += toplamRow;
       csv += '\n';
 
-      // ========== 3. GELEN DETAY (Kalem Kalem) ==========
+      // ========== 3. GELEN - DETAY (Kalem Kalem) ==========
       csv += '=== 3. GELEN - DETAY (Kalem Kalem) ===\n';
-      csv += 'Ay;Kişi;Tutar\n';
+      csv += 'Ay;Kişi;Tutar (₺)\n';
       sortedGelen.forEach(k => {
         const aylar = k.aylar || {};
         for (let i = 0; i < 12; i++) {
@@ -1615,15 +1627,27 @@
       csv += '\n';
 
       // ========== 4. MALZEMELER ==========
-      csv += '=== 4. MALZEMELER ===\n';
-      csv += 'Malzeme;Birim Fiyat;Miktar;Alındı mı?;Toplam Maliyet\n';
-      state.malzemeler.forEach(m => {
+      csv += '=== 4. MALZEMELER / GİDER LİSTESİ ===\n';
+      csv += 'Malzeme Adı;Birim Fiyat (₺);Miktar;Alındı mı?;Toplam Maliyet (₺)\n';
+      // Önce alınanlar
+      state.malzemeler.filter(m => m.alindi === 'Evet').forEach(m => {
         const toplam = Number(m.fiyat) * Number(m.miktar);
-        csv += `"${m.ad}";${m.fiyat};${m.miktar};${m.alindi};${toplam}\n`;
+        csv += `"${m.ad}";${m.fiyat};${m.miktar};Evet;${toplam}\n`;
+      });
+      // Sonra bekleyenler
+      state.malzemeler.filter(m => m.alindi !== 'Evet').forEach(m => {
+        const toplam = Number(m.fiyat) * Number(m.miktar);
+        csv += `"${m.ad}";${m.fiyat};${m.miktar};Hayır;${toplam}\n`;
       });
       csv += '\n';
+      csv += 'GİDER TOPLAMLARI\n';
+      csv += `Toplam Gider (sadece Alınanlar);${totalGider()}\n`;
+      const bekleyenToplam = state.malzemeler.filter(m => m.alindi !== 'Evet').reduce((s, m) => s + (Number(m.fiyat) * Number(m.miktar)), 0);
+      csv += `Bekleyen Gider (Tahmini);${bekleyenToplam}\n`;
+      csv += `Tüm Kalemlerin Toplamı;${totalGider() + bekleyenToplam}\n`;
+      csv += '\n';
 
-      // ========== 5. ESKİ BORÇ ÖZET (12 Ay) ==========
+      // ========== 5. ESKİ BORÇ - ÖZET (12 Ay) ==========
       csv += '=== 5. ESKİ BORÇ - ÖZET (12 Ay) ===\n';
       csv += 'Kişi;Oca;Şub;Mar;Nis;May;Haz;Tem;Ağu;Eyl;Eki;Kas;Ara;Toplam\n';
       const sortedBorc = [...state.borcKisiler].sort((a, b) => (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' }));
@@ -1639,7 +1663,6 @@
         row += `;${kisiBorcToplam(k)}\n`;
         csv += row;
       });
-      // Toplam satırı
       let borcToplamRow = 'TOPLAM';
       for (let i = 0; i < 12; i++) {
         const ayTop = state.borcKisiler.reduce((s, k) => s + ayBorcDegeri((k.aylar || {})[i]), 0);
@@ -1649,9 +1672,9 @@
       csv += borcToplamRow;
       csv += '\n';
 
-      // ========== 6. ESKİ BORÇ DETAY (Kalem Kalem) ==========
+      // ========== 6. ESKİ BORÇ - DETAY (Kalem Kalem) ==========
       csv += '=== 6. ESKİ BORÇ - DETAY (Kalem Kalem) ===\n';
-      csv += 'Ay;Kişi;Tutar;Durum\n';
+      csv += 'Ay;Kişi;Tutar (₺);Durum\n';
       sortedBorc.forEach(k => {
         const aylar = k.aylar || {};
         for (let i = 0; i < 12; i++) {
@@ -1665,6 +1688,23 @@
           }
         }
       });
+      csv += '\n';
+
+      // ========== 7. AYLIK ÖZET ==========
+      csv += '=== 7. AYLIK GÖNDERİM TOPLAMLARI ===\n';
+      csv += 'Ay;Toplam Gelen (₺)\n';
+      for (let i = 0; i < 12; i++) {
+        const ayTop = state.gelenKisiler.reduce((s, k) => s + (Number((k.aylar || {})[i]) || 0), 0);
+        csv += `${AYLAR[i]};${ayTop || 0}\n`;
+      }
+      csv += `GENEL TOPLAM;${totalGonderilen()}\n`;
+      csv += '\n';
+
+      // ========== TALİMAT ==========
+      csv += '=== KULLANIM NOTU ===\n';
+      csv += 'Bu dosya programdan otomatik oluşturulmuştur.\n';
+      csv += 'Kalem kalem detaylar yukarıdaki bölümlerde yer alır.\n';
+      csv += 'Excel veya Numbers ile açabilirsiniz. Düzenledikten sonra "Excel’den Yükle" ile geri yükleyebilirsiniz.\n';
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -1673,7 +1713,7 @@
       a.download = `kisi-malzeme-butce-${today()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Excel (CSV) indirildi – detaylı');
+      showToast('Excel (CSV) indirildi – kalem kalem düzenli');
     }
 
     function importExcel(event) {
