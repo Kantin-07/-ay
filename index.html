@@ -504,7 +504,7 @@
       <button class="btn btn-outline" onclick="document.getElementById('excelFile').click()">Excel’den Yükle</button>
       <input type="file" id="excelFile" accept=".csv,text/csv" style="display:none" onchange="importExcel(event)" />
     </div>
-    <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">“Excel’e Aktar” ile gerçek .xlsx dosyası iner (her bölüm ayrı sayfada). CSV yükleme hala çalışır.</p>
+    <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">“Excel’e Aktar” ile profesyonel çok sayfalı .xlsx iner (Özet, Kişiler, Gönderimler, Malzemeler…).</p>
   </div>
 
   <div id="toast"></div>
@@ -1559,59 +1559,55 @@
 
       const wb = XLSX.utils.book_new();
       const todayStr = today();
+      const nowStr = new Date().toLocaleString('tr-TR');
 
-      // ========== 1. ANA SAYFA ==========
-      const anaData = [
+      // ========== 1. ÖZET (Ana Sayfa) ==========
+      const ozet = [
         ['KİŞİ & MALZEME BÜTÇE TAKİP'],
-        ['Gönderilen paralar ve malzeme giderleri toplamları • Kalan bütçe'],
+        ['Dışa Aktarım', nowStr],
         [],
-        ['BÜTÇE', '', '', 'GÖNDERİLEN PARALAR'],
-        ['Toplam Başlangıç Bütçesi', state.butce, '', 'Toplam Gönderilen', totalGonderilen()],
-        ['KALAN PARA', kalan(), '', 'Kayıt Sayısı', state.gelenKisiler.reduce((s,k) => s + Object.values(k.aylar||{}).filter(v => Number(v)>0).length, 0)],
-        [],
-        ['MALZEME GİDERLERİ'],
+        ['ÖZET'],
+        ['Kalem', 'Tutar (₺)'],
+        ['Toplam Başlangıç Bütçesi', state.butce],
+        ['Toplam Gelen', totalGonderilen()],
         ['Toplam Gider (Alınanlar)', totalGider()],
-        ['Bekleyen Gider (Tahmini)', state.malzemeler.filter(m => m.alindi !== 'Evet').reduce((s, m) => s + (Number(m.fiyat) * Number(m.miktar)), 0)],
+        ['Bekleyen Gider', state.malzemeler.filter(m => m.alindi !== 'Evet').reduce((s, m) => s + (Number(m.fiyat) * Number(m.miktar)), 0)],
+        ['Toplam Alacak (Eski Borç)', totalBorc()],
+        ['Elimizdeki Para (Kalan)', kalan()],
         [],
-        ['Sarı hücreye kendi toplam bütçenizi yazın. Gönderilen ve gider toplamları otomatik hesaplanır.'],
-        [],
-        ['Özet'],
-        ['Kişi sayısı', state.kisiler.length],
-        ['Malzeme kalemi', state.malzemeler.length],
-        ['Alınan malzeme', state.malzemeler.filter(m => m.alindi === 'Evet').length],
-        ['Bekleyen malzeme', state.malzemeler.filter(m => m.alindi !== 'Evet').length],
-        [],
-        ['Nasıl kullanılır?'],
-        ['1. Kişiler sayfasına para göndereceğiniz kişileri ekleyin.'],
-        ['2. Gelen sekmesinde her aya tutar yazın veya +250 kullanın.'],
-        ['3. Malzemeler sayfasına çay, kahve, bardak vb. giderleri girin. Alındığında Evet seçin.'],
-        ['4. Ana Sayfa’daki bütçeyi kaydedin. Tüm toplamlar otomatik güncellenir.'],
-        [],
-        ['Dışa Aktarım Tarihi', todayStr]
+        ['SAYILAR'],
+        ['Kişi Sayısı', state.kisiler.length],
+        ['Gelen Kayıt Sayısı', state.gelenKisiler.length],
+        ['Malzeme Kalemi', state.malzemeler.length],
+        ['Alınan Malzeme', state.malzemeler.filter(m => m.alindi === 'Evet').length],
+        ['Bekleyen Malzeme', state.malzemeler.filter(m => m.alindi !== 'Evet').length],
+        ['Borçlu Kişi', state.borcKisiler.length]
       ];
-      const wsAna = XLSX.utils.aoa_to_sheet(anaData);
-      wsAna['!cols'] = [{wch: 28}, {wch: 14}, {wch: 4}, {wch: 22}, {wch: 14}];
-      XLSX.utils.book_append_sheet(wb, wsAna, 'Ana Sayfa');
+      const wsOzet = XLSX.utils.aoa_to_sheet(ozet);
+      wsOzet['!cols'] = [{ wch: 28 }, { wch: 16 }];
+      XLSX.utils.book_append_sheet(wb, wsOzet, 'Özet');
 
       // ========== 2. KİŞİLER ==========
-      const kisiHeader = ['No', 'Ad Soyad', 'Toplam Gelen (₺)', 'Toplam Alacak (₺)', 'Notlar'];
-      const kisiRows = [kisiHeader];
+      const kisiRows = [['No', 'Ad Soyad', 'Toplam Gelen (₺)', 'Toplam Alacak (₺)', 'Not']];
       const sortedKisiler = [...state.kisiler].sort((a, b) => (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' }));
       sortedKisiler.forEach((k, idx) => {
         const gelenK = state.gelenKisiler.find(g => g.ad === k.ad);
         const borcK = state.borcKisiler.find(b => b.ad === k.ad);
-        const topGelen = gelenK ? kisiGelenToplam(gelenK) : 0;
-        const topBorc = borcK ? kisiBorcToplam(borcK) : 0;
-        kisiRows.push([idx + 1, k.ad, topGelen, topBorc, k.not || '']);
+        kisiRows.push([
+          idx + 1,
+          k.ad || '',
+          gelenK ? kisiGelenToplam(gelenK) : 0,
+          borcK ? kisiBorcToplam(borcK) : 0,
+          k.not || ''
+        ]);
       });
-      kisiRows.push(['TOPLAM', '', totalGonderilen(), totalBorc(), '']);
+      kisiRows.push(['', 'TOPLAM', totalGonderilen(), totalBorc(), '']);
       const wsKisi = XLSX.utils.aoa_to_sheet(kisiRows);
-      wsKisi['!cols'] = [{wch: 6}, {wch: 22}, {wch: 16}, {wch: 16}, {wch: 25}];
+      wsKisi['!cols'] = [{ wch: 6 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 24 }];
       XLSX.utils.book_append_sheet(wb, wsKisi, 'Kişiler');
 
       // ========== 3. GÖNDERİMLER (Kalem Kalem) ==========
-      const gonHeader = ['Ay', 'Kişi', 'Tutar (₺)', 'Açıklama'];
-      const gonRows = [gonHeader];
+      const gonRows = [['Ay', 'Kişi', 'Tutar (₺)', 'Açıklama']];
       const sortedGelen = [...state.gelenKisiler].sort((a, b) => (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' }));
       sortedGelen.forEach(k => {
         const aylar = k.aylar || {};
@@ -1622,39 +1618,52 @@
           }
         }
       });
-      gonRows.push(['TOPLAM GÖNDERİLEN', '', totalGonderilen(), '']);
+      gonRows.push(['', 'TOPLAM GÖNDERİLEN', totalGonderilen(), '']);
       const wsGon = XLSX.utils.aoa_to_sheet(gonRows);
-      wsGon['!cols'] = [{wch: 10}, {wch: 22}, {wch: 12}, {wch: 20}];
+      wsGon['!cols'] = [{ wch: 10 }, { wch: 22 }, { wch: 12 }, { wch: 20 }];
       XLSX.utils.book_append_sheet(wb, wsGon, 'Gönderimler');
 
-      // ========== 4. MALZEMELER ==========
-      const malHeader = ['Malzeme Adı', 'Birim Fiyat (₺)', 'Miktar', 'Alındı mı?', 'Toplam Maliyet (₺)', 'Notlar'];
-      const malRows = [malHeader];
-      state.malzemeler.forEach(m => {
-        const toplam = Number(m.fiyat) * Number(m.miktar);
-        malRows.push([m.ad, m.fiyat, m.miktar, m.alindi, toplam, '']);
+      // ========== 4. GELEN ÖZET (12 Ay) ==========
+      const gelenOzetHeader = ['Kişi', ...AYLAR, 'Toplam'];
+      const gelenOzetRows = [gelenOzetHeader];
+      sortedGelen.forEach(k => {
+        const aylar = k.aylar || {};
+        const row = [k.ad];
+        for (let i = 0; i < 12; i++) {
+          row.push(Number(aylar[i]) || '');
+        }
+        row.push(kisiGelenToplam(k));
+        gelenOzetRows.push(row);
+      });
+      const topGelen = ['TOPLAM'];
+      for (let i = 0; i < 12; i++) {
+        topGelen.push(state.gelenKisiler.reduce((s, k) => s + (Number((k.aylar || {})[i]) || 0), 0) || '');
+      }
+      topGelen.push(totalGonderilen());
+      gelenOzetRows.push(topGelen);
+      const wsGelenOzet = XLSX.utils.aoa_to_sheet(gelenOzetRows);
+      wsGelenOzet['!cols'] = [{ wch: 18 }, ...Array(12).fill({ wch: 7 }), { wch: 10 }];
+      XLSX.utils.book_append_sheet(wb, wsGelenOzet, 'Gelen Özet');
+
+      // ========== 5. MALZEMELER ==========
+      const malRows = [['Malzeme Adı', 'Birim Fiyat (₺)', 'Miktar', 'Alındı mı?', 'Toplam (₺)', 'Not']];
+      // Önce alınanlar
+      state.malzemeler.filter(m => m.alindi === 'Evet').forEach(m => {
+        malRows.push([m.ad, Number(m.fiyat) || 0, Number(m.miktar) || 0, 'Evet', (Number(m.fiyat) || 0) * (Number(m.miktar) || 0), '']);
+      });
+      // Sonra bekleyenler
+      state.malzemeler.filter(m => m.alindi !== 'Evet').forEach(m => {
+        malRows.push([m.ad, Number(m.fiyat) || 0, Number(m.miktar) || 0, 'Hayır', (Number(m.fiyat) || 0) * (Number(m.miktar) || 0), '']);
       });
       malRows.push([]);
       malRows.push(['GİDER TOPLAMLARI']);
-      malRows.push(['Toplam Gider (sadece Alınanlar)', totalGider()]);
-      const bekleyen = state.malzemeler.filter(m => m.alindi !== 'Evet').reduce((s, m) => s + (Number(m.fiyat) * Number(m.miktar)), 0);
-      malRows.push(['Bekleyen Gider (Tahmini)', bekleyen]);
-      malRows.push(['Tüm Kalemlerin Toplamı', totalGider() + bekleyen]);
+      malRows.push(['Toplam Gider (Alınanlar)', totalGider()]);
+      const bekleyenToplam = state.malzemeler.filter(m => m.alindi !== 'Evet').reduce((s, m) => s + (Number(m.fiyat) * Number(m.miktar)), 0);
+      malRows.push(['Bekleyen Gider', bekleyenToplam]);
+      malRows.push(['Genel Toplam', totalGider() + bekleyenToplam]);
       const wsMal = XLSX.utils.aoa_to_sheet(malRows);
-      wsMal['!cols'] = [{wch: 22}, {wch: 14}, {wch: 10}, {wch: 12}, {wch: 16}, {wch: 18}];
+      wsMal['!cols'] = [{ wch: 24 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 18 }];
       XLSX.utils.book_append_sheet(wb, wsMal, 'Malzemeler');
-
-      // ========== 5. AYLIK ÖZET ==========
-      const ayHeader = ['Ay', 'Toplam Gönderilen (₺)'];
-      const ayRows = [ayHeader];
-      for (let i = 0; i < 12; i++) {
-        const ayTop = state.gelenKisiler.reduce((s, k) => s + (Number((k.aylar || {})[i]) || 0), 0);
-        ayRows.push([AYLAR[i], ayTop]);
-      }
-      ayRows.push(['GENEL TOPLAM', totalGonderilen()]);
-      const wsAy = XLSX.utils.aoa_to_sheet(ayRows);
-      wsAy['!cols'] = [{wch: 12}, {wch: 20}];
-      XLSX.utils.book_append_sheet(wb, wsAy, 'Aylık Özet');
 
       // ========== 6. ESKİ BORÇ ==========
       const borcHeader = ['Kişi', ...AYLAR, 'Toplam'];
@@ -1672,49 +1681,51 @@
         row.push(kisiBorcToplam(k));
         borcRows.push(row);
       });
-      const topRow = ['TOPLAM'];
+      const topBorc = ['TOPLAM'];
       for (let i = 0; i < 12; i++) {
-        topRow.push(state.borcKisiler.reduce((s, k) => s + ayBorcDegeri((k.aylar || {})[i]), 0) || '');
+        topBorc.push(state.borcKisiler.reduce((s, k) => s + ayBorcDegeri((k.aylar || {})[i]), 0) || '');
       }
-      topRow.push(totalBorc());
-      borcRows.push(topRow);
+      topBorc.push(totalBorc());
+      borcRows.push(topBorc);
       const wsBorc = XLSX.utils.aoa_to_sheet(borcRows);
-      wsBorc['!cols'] = [{wch: 18}, ...Array(12).fill({wch: 7}), {wch: 10}];
+      wsBorc['!cols'] = [{ wch: 18 }, ...Array(12).fill({ wch: 7 }), { wch: 10 }];
       XLSX.utils.book_append_sheet(wb, wsBorc, 'Eski Borç');
 
-      // ========== 7. TALİMATLAR ==========
+      // ========== 7. AYLIK ÖZET ==========
+      const ayRows = [['Ay', 'Toplam Gelen (₺)']];
+      for (let i = 0; i < 12; i++) {
+        const ayTop = state.gelenKisiler.reduce((s, k) => s + (Number((k.aylar || {})[i]) || 0), 0);
+        ayRows.push([AYLAR[i], ayTop]);
+      }
+      ayRows.push(['GENEL TOPLAM', totalGonderilen()]);
+      const wsAy = XLSX.utils.aoa_to_sheet(ayRows);
+      wsAy['!cols'] = [{ wch: 12 }, { wch: 16 }];
+      XLSX.utils.book_append_sheet(wb, wsAy, 'Aylık Özet');
+
+      // ========== 8. TALİMATLAR ==========
       const talimat = [
         ['KULLANIM KILAVUZU'],
         [],
-        ['Bu dosya programdan otomatik oluşturulmuştur (çok sayfalı .xlsx).'],
+        ['Bu dosya Kişi & Malzeme Bütçe programından otomatik oluşturulmuştur.'],
         [],
-        ['ANA SAYFA'],
-        ['• Bütçe, kalan para, toplamlar burada özetlenir.'],
-        [],
-        ['KİŞİLER'],
-        ['• Ad Soyad ve toplam gelen / alacak görünür.'],
-        [],
-        ['GÖNDERİMLER'],
-        ['• Aylık tutarlar kalem kalem listelenir.'],
-        [],
-        ['MALZEMELER'],
-        ['• Alındı / Bekliyor durumuna göre giderler ayrılır.'],
-        [],
-        ['AYLIK ÖZET'],
-        ['• Ay ay toplam gönderilen tutarlar.'],
-        [],
-        ['ESKİ BORÇ'],
-        ['• 12 aylık borç tablosu. − = ödendi.'],
+        ['SAYFA AÇIKLAMALARI'],
+        ['Özet          → Genel bütçe, kalan para ve sayılar'],
+        ['Kişiler       → Kişi listesi + toplam gelen / alacak'],
+        ['Gönderimler   → Ay + Kişi + Tutar (kalem kalem)'],
+        ['Gelen Özet    → 12 aylık kişi bazlı tablo'],
+        ['Malzemeler    → Alınan ve bekleyen giderler'],
+        ['Eski Borç     → 12 aylık borç tablosu (− = ödendi)'],
+        ['Aylık Özet    → Ay ay toplamlar'],
         [],
         ['İpucu: iPhone / iPad’de Numbers veya Excel ile açabilirsiniz.']
       ];
       const wsTal = XLSX.utils.aoa_to_sheet(talimat);
-      wsTal['!cols'] = [{wch: 70}];
+      wsTal['!cols'] = [{ wch: 70 }];
       XLSX.utils.book_append_sheet(wb, wsTal, 'Talimatlar');
 
       // İndir
       XLSX.writeFile(wb, `kisi-malzeme-butce-${todayStr}.xlsx`);
-      showToast('Excel (.xlsx) indirildi – her bölüm ayrı sayfada');
+      showToast('Excel (.xlsx) indirildi – C-ntin kalitesinde');
     }
 
     function importExcel(event) {
