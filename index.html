@@ -304,8 +304,20 @@
   </style>
 </head>
 <body>
-  <h1>👥 Kişi & Malzeme Bütçe</h1>
-  <p class="subtitle">Gelen + Gider → Elimizdeki para</p>
+  <!-- PROFİL BAR -->
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;padding:4px 2px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div id="avatarWrap" style="position:relative;width:56px;height:56px;border-radius:50%;overflow:hidden;border:2.5px solid #2563eb;background:#dbeafe;cursor:pointer;flex-shrink:0;box-shadow:0 2px 8px rgba(37,99,235,0.2);" title="Fotoğraf değiştir – tıkla">
+        <div id="avatarPlaceholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:#2563eb;">M</div>
+        <img id="userPhoto" style="display:none;width:100%;height:100%;object-fit:cover;" alt="Profil" />
+        <input type="file" id="photoInput" accept="image/*" style="display:none;" />
+      </div>
+      <div>
+        <div style="font-weight:800;font-size:1.1rem;color:#0f172a;line-height:1.25;">Mehmet DEVELİOĞLU</div>
+        <div style="font-size:0.75rem;color:#64748b;margin-top:2px;">Kişi & Malzeme Bütçe</div>
+      </div>
+    </div>
+  </div>
 
   <!-- EN ÜSTTE: TOPLAM PARA + BORÇ -->
   <div class="top-totals">
@@ -314,7 +326,7 @@
       <div class="value" id="sumKalan">0 ₺</div>
     </div>
     <div class="top-box borc">
-      <div class="label">Toplam Borç</div>
+      <div class="label">Toplam Alacak</div>
       <div class="value" id="sumBorc">0 ₺</div>
     </div>
   </div>
@@ -721,18 +733,25 @@
           </td>`;
         for (let i = 0; i < 12; i++) {
           const raw = aylar[i];
-          const num = Number(raw) || 0;
+          const hasValue = raw !== '' && raw != null && raw !== undefined;
+          const num = Number(raw);
+          const isNum = hasValue && !isNaN(num) && String(raw).trim() !== '';
           const isAktifAy = (i === buAy || i === gecenAy);
-          // Kayıtlı rakam her zaman görünsün (silinmesin)
-          const displayVal = num > 0 ? String(num) : '';
+          // Rakam veya yazı her zaman görünsün
+          const displayVal = hasValue ? String(raw) : '';
           let cellStyle = '';
           let inputStyle = '';
           let readonly = '';
 
-          if (num > 0) {
-            // Değer var → yeşil
+          if (isNum && num > 0) {
+            // Sayısal tutar → yeşil
             cellStyle = 'background:#dcfce7;';
             inputStyle = 'background:#bbf7d0;border-color:#22c55e;color:#166534;font-weight:700;';
+            if (!editing && !isAktifAy) readonly = 'readonly';
+          } else if (hasValue) {
+            // Yazı / not → turuncu-sarı
+            cellStyle = 'background:#fef3c7;';
+            inputStyle = 'background:#fde68a;border-color:#f59e0b;color:#92400e;font-weight:600;';
             if (!editing && !isAktifAy) readonly = 'readonly';
           } else if (editing || isAktifAy) {
             // Boş ama yazılabilir → kırmızı
@@ -747,14 +766,14 @@
           if (editing) readonly = '';
 
           html += `<td style="padding:2px;${cellStyle}">
-            <input type="number" inputmode="decimal"
+            <input type="text" inputmode="text"
               data-gelen-id="${k.id}" data-ay="${i}"
               style="width:100%;border:1px solid #e2e8f0;border-radius:4px;padding:4px 2px;text-align:right;font-size:0.8rem;${inputStyle}"
-              value="${displayVal}"
+              value="${escape(displayVal)}"
               ${readonly}
               onchange="updateGelenAy('${k.id}', ${i}, this.value)"
               onblur="updateGelenAy('${k.id}', ${i}, this.value)"
-              placeholder="${(editing || isAktifAy) && !num ? '0' : ''}">
+              placeholder="${(editing || isAktifAy) && !hasValue ? '250 / not' : ''}">
           </td>`;
         }
         const top = kisiGelenToplam(k);
@@ -1067,7 +1086,7 @@
           html += `<tr><td>${escape(b.ad)}</td><td class="num">—</td><td><span class="badge badge-yes">Ödendi</span></td></tr>`;
         });
         const topB = borclu.reduce((s,b) => s + b.tutar, 0);
-        html += `<tr style="font-weight:700;background:#f1f5f9"><td>TOPLAM BORÇ</td><td class="num" style="color:var(--red)">${formatMoney(topB)}</td><td></td></tr>`;
+        html += `<tr style="font-weight:700;background:#f1f5f9"><td>TOPLAM ALACAK</td><td class="num" style="color:var(--red)">${formatMoney(topB)}</td><td></td></tr>`;
         html += `</tbody></table>`;
       }
 
@@ -1214,12 +1233,18 @@
       const k = state.gelenKisiler.find(x => x.id === kisiId);
       if (!k) return;
       if (!k.aylar) k.aylar = {};
-      const v = String(value == null ? '' : value).trim().replace(',', '.');
+      const v = String(value == null ? '' : value).trim();
       if (v === '' || v === '-') {
         k.aylar[ayIndex] = '';
       } else {
-        const n = parseFloat(v);
-        k.aylar[ayIndex] = isNaN(n) ? '' : n;
+        // Rakam ise sayı olarak, değilse yazı olarak sakla
+        const normalized = v.replace(',', '.');
+        const n = parseFloat(normalized);
+        if (!isNaN(n) && String(n) === normalized) {
+          k.aylar[ayIndex] = n;
+        } else {
+          k.aylar[ayIndex] = v; // yazı / not
+        }
       }
       syncBorcFromGelen(k.ad, ayIndex, k.aylar[ayIndex]);
       save();
@@ -1236,11 +1261,16 @@
       inputs.forEach(inp => {
         const ay = parseInt(inp.getAttribute('data-ay'), 10);
         if (isNaN(ay)) return;
-        const v = String(inp.value || '').trim().replace(',', '.');
+        const v = String(inp.value || '').trim();
         if (v === '') k.aylar[ay] = '';
         else {
-          const n = parseFloat(v);
-          k.aylar[ay] = isNaN(n) ? '' : n;
+          const normalized = v.replace(',', '.');
+          const n = parseFloat(normalized);
+          if (!isNaN(n) && String(n) === normalized) {
+            k.aylar[ay] = n;
+          } else {
+            k.aylar[ay] = v; // yazı / not
+          }
         }
         syncBorcFromGelen(k.ad, ay, k.aylar[ay]);
       });
@@ -1535,7 +1565,7 @@
 
       // ========== 1. KİŞİLER ==========
       csv += '=== 1. KİŞİLER ===\n';
-      csv += 'Ad Soyad;Not;Toplam Gelen;Toplam Borç\n';
+      csv += 'Ad Soyad;Not;Toplam Gelen;Toplam Alacak\n';
       const sortedKisiler = [...state.kisiler].sort((a, b) => (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' }));
       sortedKisiler.forEach(k => {
         const gelenK = state.gelenKisiler.find(g => g.ad === k.ad);
@@ -1815,9 +1845,43 @@
     window.toggleButcePanel = toggleButcePanel;
 
     window.undoDelete = undoDelete;
+
+    // --- PROFİL FOTOĞRAFI ---
+    const PHOTO_KEY = 'kisiMalzeme_photo_v1';
+    function loadPhoto() {
+      const saved = localStorage.getItem(PHOTO_KEY);
+      const img = document.getElementById('userPhoto');
+      const placeholder = document.getElementById('avatarPlaceholder');
+      if (saved && img) {
+        img.src = saved;
+        img.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+      }
+    }
+    function setupPhotoUpload() {
+      const wrap = document.getElementById('avatarWrap');
+      const input = document.getElementById('photoInput');
+      if (!wrap || !input) return;
+      wrap.onclick = function() { input.click(); };
+      input.onchange = function(e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          const data = ev.target.result;
+          localStorage.setItem(PHOTO_KEY, data);
+          loadPhoto();
+          showToast('Fotoğraf kaydedildi');
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+
     // Başlat
     load();
     refreshAll();
+    loadPhoto();
+    setupPhotoUpload();
   </script>
 </body>
 </html>
