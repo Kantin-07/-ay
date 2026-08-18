@@ -178,9 +178,18 @@
     }
 
     /* Excel tarzı tablo listeler */
+    .table-scroll {
+      overflow: auto;
+      max-height: min(70vh, 560px);
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+    }
     .excel-table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       font-size: 0.82rem;
     }
     .excel-table th {
@@ -192,6 +201,9 @@
       border: 1px solid #cbd5e1;
       white-space: nowrap;
       font-size: 0.75rem;
+      position: sticky;
+      top: 0;
+      z-index: 2;
     }
     .excel-table td {
       padding: 8px 6px;
@@ -409,7 +421,7 @@
       <button type="button" class="btn btn-green" onclick="addGelenKisi()">Kişi Ekle</button>
       <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Kişi ekledikten sonra yeşil <b>+</b> ile bu aya 250 ekleyebilir veya hücrelere yazabilirsiniz.</p>
     </div>
-    <div class="card" style="overflow-x:auto;">
+    <div class="card">
       <h2>📋 Gelen Tablosu (12 Ay)</h2>
       <div id="gonderimList"></div>
     </div>
@@ -465,7 +477,7 @@
       <button type="button" class="btn btn-green" onclick="addBorcKisi()">Kişi Ekle</button>
       <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Aylara <b>elle tutar yazın</b>. Yeşil <b>+</b> kısayol ile 250 yazar. <b>−</b> = ödendi. ✎ kaydeder, Sil ile siler. Sadece girilen tutarlar toplanır.</p>
     </div>
-    <div class="card" style="overflow-x:auto;">
+    <div class="card">
       <h2>📋 Eski Borç Tablosu (12 Ay)</h2>
       <div id="borcList"></div>
     </div>
@@ -523,6 +535,7 @@
     const gelenEditMode = new Set();
     const malzemeEditMode = new Set();
     const borcEditMode = new Set();
+    const kisiEditMode = new Set();
 
     function formatMoney(n) {
       return (Number(n) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' ₺';
@@ -673,30 +686,51 @@
       const sorted = [...state.kisiler].sort((a, b) =>
         (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' })
       );
-      let html = `<table class="excel-table">
+      let html = `<div class="table-scroll"><table class="excel-table">
         <thead><tr>
           <th style="width:36px;text-align:center">#</th>
           <th>Ad Soyad</th>
           <th>Not</th>
           <th style="text-align:right">Toplam Gelen</th>
-          <th></th>
+          <th style="width:88px"></th>
         </tr></thead><tbody>`;
       sorted.forEach((k, idx) => {
         const gelenK = state.gelenKisiler.find(g => g.ad === k.ad);
         const toplam = gelenK ? kisiGelenToplam(gelenK) : 0;
         const kid = String(k.id);
-        html += `<tr>
-          <td style="text-align:center;color:var(--muted);font-weight:700">${idx + 1}</td>
-          <td style="font-weight:600">${escape(k.ad)}</td>
-          <td style="color:var(--muted)">${escape(k.not) || '—'}</td>
-          <td class="num" style="color:var(--primary)">${formatMoney(toplam)}</td>
-          <td style="width:48px;text-align:center">
-            <button type="button" onclick="window.delKisi('${kid}')" title="Sil"
-              style="border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:0.78rem;font-weight:700;padding:6px 10px;cursor:pointer;">Sil</button>
-          </td>
-        </tr>`;
+        const editing = kisiEditMode.has(kid);
+        if (editing) {
+          html += `<tr>
+            <td style="text-align:center;color:var(--muted);font-weight:700">${idx + 1}</td>
+            <td><input type="text" id="kisiEditAd_${kid}" value="${escape(k.ad)}"
+              style="width:100%;border:1px solid #93c5fd;border-radius:6px;padding:6px 8px;font-size:0.9rem;font-weight:600;background:#eff6ff;" /></td>
+            <td><input type="text" id="kisiEditNot_${kid}" value="${escape(k.not || '')}"
+              placeholder="Not"
+              style="width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:6px 8px;font-size:0.85rem;background:#f8fafc;" /></td>
+            <td class="num" style="color:var(--primary)">${formatMoney(toplam)}</td>
+            <td style="text-align:center;white-space:nowrap">
+              <button type="button" onclick="toggleKisiDuzenle('${kid}')" title="Kaydet"
+                style="border:1px solid #86efac;background:#dcfce7;color:#166534;border-radius:6px;padding:5px 8px;font-size:0.75rem;cursor:pointer;font-weight:700;margin-right:4px;">✓</button>
+              <button type="button" onclick="window.delKisi('${kid}')" title="Sil"
+                style="border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:0.78rem;font-weight:700;padding:5px 8px;cursor:pointer;">Sil</button>
+            </td>
+          </tr>`;
+        } else {
+          html += `<tr>
+            <td style="text-align:center;color:var(--muted);font-weight:700">${idx + 1}</td>
+            <td style="font-weight:600">${escape(k.ad)}</td>
+            <td style="color:var(--muted)">${escape(k.not) || '—'}</td>
+            <td class="num" style="color:var(--primary)">${formatMoney(toplam)}</td>
+            <td style="text-align:center;white-space:nowrap">
+              <button type="button" onclick="toggleKisiDuzenle('${kid}')" title="Düzenle"
+                style="border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:5px 8px;font-size:0.75rem;cursor:pointer;font-weight:700;margin-right:4px;">✎</button>
+              <button type="button" onclick="window.delKisi('${kid}')" title="Sil"
+                style="border:1px solid #fca5a5;background:#fef2f2;border-radius:8px;color:#dc2626;font-size:0.78rem;font-weight:700;padding:5px 8px;cursor:pointer;">Sil</button>
+            </td>
+          </tr>`;
+        }
       });
-      html += '</tbody></table>';
+      html += '</tbody></table></div>';
       list.innerHTML = html;
     }
 
@@ -710,13 +744,13 @@
         (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' })
       );
       const buAy = new Date().getMonth(); // 0-11
-      let html = `<table class="excel-table" style="min-width:720px">
+      let html = `<div class="table-scroll"><table class="excel-table" style="min-width:720px">
         <thead><tr>
-          <th style="position:sticky;left:0;background:#e2e8f0;z-index:1">Kişi</th>
-          <th style="text-align:center;width:40px">+</th>`;
-      AYLAR.forEach(a => { html += `<th style="text-align:center;min-width:52px">${a}</th>`; });
-      html += `<th style="text-align:right;background:#dbeafe">Toplam</th>
-          <th></th>
+          <th style="position:sticky;left:0;top:0;background:#e2e8f0;z-index:3">Kişi</th>
+          <th style="position:sticky;top:0;text-align:center;width:40px;z-index:2">+</th>`;
+      AYLAR.forEach(a => { html += `<th style="position:sticky;top:0;text-align:center;min-width:52px;z-index:2">${a}</th>`; });
+      html += `<th style="position:sticky;top:0;text-align:right;background:#dbeafe;z-index:2">Toplam</th>
+          <th style="position:sticky;top:0;z-index:2"></th>
         </tr></thead><tbody>`;
 
       const gecenAy = (buAy + 11) % 12; // geçen ay
@@ -802,7 +836,7 @@
       }
       html += `<td class="num" style="background:#dbeafe;color:var(--primary)">${formatMoney(totalGonderilen())}</td>
         <td></td>
-      </tr></tbody></table>`;
+      </tr></tbody></table></div>`;
       list.innerHTML = html;
     }
 
@@ -887,13 +921,13 @@
       );
       const buAy = new Date().getMonth();
       const gecenAy = (buAy + 11) % 12;
-      let html = `<table class="excel-table" style="min-width:720px">
+      let html = `<div class="table-scroll"><table class="excel-table" style="min-width:720px">
         <thead><tr>
-          <th style="position:sticky;left:0;background:#e2e8f0;z-index:1">Kişi</th>
-          <th style="text-align:center;width:40px">+</th>`;
-      AYLAR.forEach(a => { html += `<th style="text-align:center;min-width:52px">${a}</th>`; });
-      html += `<th style="text-align:right;background:#fef3c7">Toplam</th>
-          <th></th>
+          <th style="position:sticky;left:0;top:0;background:#e2e8f0;z-index:3">Kişi</th>
+          <th style="position:sticky;top:0;text-align:center;width:40px;z-index:2">+</th>`;
+      AYLAR.forEach(a => { html += `<th style="position:sticky;top:0;text-align:center;min-width:52px;z-index:2">${a}</th>`; });
+      html += `<th style="position:sticky;top:0;text-align:right;background:#fef3c7;z-index:2">Toplam</th>
+          <th style="position:sticky;top:0;z-index:2"></th>
         </tr></thead><tbody>`;
 
       sortedBorc.forEach((k, idx) => {
@@ -961,7 +995,7 @@
       }
       html += `<td class="num" style="background:#fef3c7;color:var(--red)">${formatMoney(totalBorc())}</td>
         <td></td>
-      </tr></tbody></table>`;
+      </tr></tbody></table></div>`;
       list.innerHTML = html;
     }
 
@@ -1156,6 +1190,42 @@
       save();
       refreshAll();
       showToast('Kişi eklendi');
+    }
+
+    function toggleKisiDuzenle(id) {
+      id = String(id || '');
+      if (!id) return;
+      if (kisiEditMode.has(id)) {
+        const k = state.kisiler.find(x => String(x.id) === id);
+        if (!k) { kisiEditMode.delete(id); renderKisiler(); return; }
+        const adInp = document.getElementById('kisiEditAd_' + id);
+        const notInp = document.getElementById('kisiEditNot_' + id);
+        const yeniAd = (adInp ? adInp.value : k.ad).trim();
+        const yeniNot = notInp ? notInp.value.trim() : (k.not || '');
+        if (!yeniAd) { showToast('Ad boş olamaz'); return; }
+        const eskiAd = k.ad;
+        // Aynı isimde başka kişi var mı?
+        if (yeniAd !== eskiAd && state.kisiler.some(x => String(x.id) !== id && x.ad === yeniAd)) {
+          showToast('Bu isim zaten kayıtlı');
+          return;
+        }
+        k.ad = yeniAd;
+        k.not = yeniNot;
+        // Gelen ve borç listelerinde isim eşleşmesini güncelle
+        if (yeniAd !== eskiAd) {
+          state.gelenKisiler.forEach(g => { if (g.ad === eskiAd) g.ad = yeniAd; });
+          state.borcKisiler.forEach(b => { if (b.ad === eskiAd) b.ad = yeniAd; });
+        }
+        kisiEditMode.delete(id);
+        save();
+        refreshAll();
+        showToast('Kişi güncellendi');
+      } else {
+        kisiEditMode.add(id);
+        renderKisiler();
+        const adInp = document.getElementById('kisiEditAd_' + id);
+        if (adInp) { adInp.focus(); adInp.select(); }
+      }
     }
 
     function delKisi(id) {
@@ -1835,6 +1905,7 @@
     // Mobil / WebView için fonksiyonları global yap
     window.addKisi = addKisi;
     window.delKisi = delKisi;
+    window.toggleKisiDuzenle = toggleKisiDuzenle;
     window.addGelenKisi = addGelenKisi;
     window.delGelenKisi = delGelenKisi;
     window.gelenAyEkle250 = gelenAyEkle250;
