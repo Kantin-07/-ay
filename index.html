@@ -338,6 +338,99 @@
       align-self: flex-end; width: 18px; height: 11px; border-radius: 3px;
       border: 1px solid rgba(0,0,0,0.15); cursor: pointer; padding: 0; opacity: 0.9;
     }
+    /* Tablo tam ekran */
+    .year-bar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 12px; padding: 10px 12px;
+      background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .year-bar .yl {
+      font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-right: 4px;
+    }
+    .year-btn {
+      border: 1.5px solid var(--border); background: #f8fafc; color: #334155;
+      border-radius: 999px; padding: 7px 14px; font-size: 0.88rem; font-weight: 800;
+      cursor: pointer;
+    }
+    .year-btn.active {
+      background: var(--primary); color: #fff; border-color: var(--primary);
+    }
+    .year-btn.debt-hint {
+      border-color: #fca5a5; background: #fef2f2; color: #b91c1c;
+    }
+    .year-btn.debt-hint.active {
+      background: #dc2626; color: #fff; border-color: #dc2626;
+    }
+    .table-fs-title-btn {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      width: 100%; border: none; background: transparent; padding: 0; cursor: pointer;
+      text-align: left; font: inherit; color: inherit;
+    }
+    .table-fs-title-btn:active { opacity: 0.75; }
+    .table-fs-title-btn .fs-hint {
+      font-size: 0.7rem; font-weight: 600; color: var(--primary);
+      background: var(--primary-soft); padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+    }
+    #tableFsOverlay {
+      display: none; position: fixed; inset: 0; z-index: 10050;
+      background: rgba(15,23,42,0.5);
+    }
+    #tableFsSheet {
+      position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+      background: #f8fafc; display: flex; flex-direction: column; overflow: hidden;
+      transform: translateY(100%); transition: transform 0.28s ease;
+      padding-top: var(--safe-top); padding-bottom: var(--safe-bottom);
+    }
+    #tableFsSheet.dragging { transition: none; }
+    #tableFsHandle {
+      flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+      padding: 8px 12px 4px; cursor: grab; touch-action: none; background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    #tableFsHandle .bar {
+      width: 42px; height: 5px; border-radius: 999px; background: #cbd5e1; margin-bottom: 8px;
+    }
+    #tableFsHeader {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; padding: 4px 14px 12px; background: #fff;
+    }
+    #tableFsHeader .title { font-size: 1.05rem; font-weight: 800; color: #0f172a; }
+    #tableFsHeader .sub { font-size: 0.72rem; color: #64748b; margin-top: 2px; }
+    #tableFsClose {
+      width: 40px; height: 40px; border: none; border-radius: 50%;
+      background: #f1f5f9; color: #334155; font-size: 1.25rem; font-weight: 700; cursor: pointer;
+      flex-shrink: 0;
+    }
+    #tableFsBody {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px 16px;
+      background: #f8fafc;
+      min-height: 0;
+    }
+    #tableFsBody .table-scroll {
+      flex: 1;
+      max-height: none !important;
+      height: 100% !important;
+      min-height: 0;
+      overflow: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+    /* Tam ekranda ay başlıkları kaydırınca üstte sabit */
+    #tableFsBody .excel-table thead th {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 4 !important;
+      background: #e2e8f0 !important;
+      box-shadow: 0 1px 0 #cbd5e1;
+    }
+    #tableFsBody .excel-table thead th:first-child {
+      left: 0 !important;
+      z-index: 5 !important;
+    }
   </style>
 </head>
 <body>
@@ -446,8 +539,18 @@
       <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Kişi ekledikten sonra yeşil <b>+</b> ile 250 yazabilir, hücrelere <b>rakam veya yazı</b> girebilir, küçük renk kutusundan renk seçebilirsiniz.</p>
     </div>
     <div class="card">
-      <h2>📋 Gelen Tablosu (12 Ay)</h2>
-      <div id="gonderimList"></div>
+      <div class="year-bar" style="margin-bottom:10px;margin-top:4px;">
+        <span class="yl">Yıl</span>
+        <button type="button" class="year-btn year-btn-2026" onclick="setAktifYil(2026)">2026</button>
+        <button type="button" class="year-btn year-btn-2027" onclick="setAktifYil(2027)">2027</button>
+        <span class="year-note" style="font-size:0.72rem;color:var(--muted);margin-left:4px;"></span>
+      </div>
+      <h2 style="margin:0">
+        <button type="button" class="table-fs-title-btn" onclick="openTableFullscreen('gelen')" title="Tam ekran">
+          <span>📋 Gelen Tablosu · <span id="gelenYilLabel"></span></span>
+        </button>
+      </h2>
+      <div id="gonderimList" style="margin-top:10px"></div>
     </div>
   </div>
 
@@ -502,8 +605,18 @@
       <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Aylara <b>tutar veya yazı</b> yazın. Yeşil <b>+</b> → 250. <b>−</b> = ödendi. Küçük renk kutusuyla hücre rengi seçin. Sadece sayısal tutarlar toplanır.</p>
     </div>
     <div class="card">
-      <h2>📋 Eski Borç Tablosu (12 Ay)</h2>
-      <div id="borcList"></div>
+      <div class="year-bar" style="margin-bottom:10px;margin-top:4px;">
+        <span class="yl">Yıl</span>
+        <button type="button" class="year-btn year-btn-2026" onclick="setAktifYil(2026)">2026</button>
+        <button type="button" class="year-btn year-btn-2027" onclick="setAktifYil(2027)">2027</button>
+        <span class="year-note" style="font-size:0.72rem;color:var(--muted);margin-left:4px;"></span>
+      </div>
+      <h2 style="margin:0">
+        <button type="button" class="table-fs-title-btn" onclick="openTableFullscreen('borc')" title="Tam ekran">
+          <span>📋 Eski Borç Tablosu · <span id="borcYilLabel"></span></span>
+        </button>
+      </h2>
+      <div id="borcList" style="margin-top:10px"></div>
     </div>
   </div>
 
@@ -532,6 +645,23 @@
     </div>
   </div>
 
+  <!-- Tablo tam ekran -->
+  <div id="tableFsOverlay">
+    <div id="tableFsSheet">
+      <div id="tableFsHandle">
+        <div class="bar"></div>
+      </div>
+      <div id="tableFsHeader">
+        <div>
+          <div class="title" id="tableFsTitle">Tablo</div>
+          <div class="sub">Aşağı kaydırarak kapatabilirsiniz</div>
+        </div>
+        <button type="button" id="tableFsClose" onclick="closeTableFullscreen()" aria-label="Kapat">✕</button>
+      </div>
+      <div id="tableFsBody"></div>
+    </div>
+  </div>
+
   <!-- Excel & Temizle -->
   <div class="card">
     <h2>📤 Excel / Veri</h2>
@@ -554,15 +684,108 @@
   <div id="toast"></div>
 
   <script>
-    const STORAGE_KEY = 'kisiMalzemeButce_v3';
+    const STORAGE_KEY = 'kisiMalzemeButce_v4';
     const AYLAR = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+    const YIL_BASLANGIC = 2026;
+    function bugunYil() { return new Date().getFullYear(); }
+    function varsayilanYil() {
+      const y = bugunYil();
+      return y < YIL_BASLANGIC ? YIL_BASLANGIC : y;
+    }
     let state = {
       butce: 0,
+      aktifYil: varsayilanYil(),
       kisiler: [],
-      gelenKisiler: [],  // { id, ad, aylar: {0:'', 1:'', ...} }  tutar girilince o aya yazılır
+      gelenKisiler: [],  // { id, ad, yilVerileri: {2026:{aylar,renkler}, ...} }
       malzemeler: [],
-      borcKisiler: []   // { id, ad, aylar: {0:'', ...} }  boş=250, -1="-"
+      borcKisiler: []
     };
+
+    function ensureYilData(k, yil) {
+      if (!k) return { aylar: {}, renkler: {} };
+      if (!k.yilVerileri) k.yilVerileri = {};
+      // Eski format → 2026'ya taşı
+      if (k.aylar && typeof k.aylar === 'object') {
+        if (!k.yilVerileri[YIL_BASLANGIC]) {
+          k.yilVerileri[YIL_BASLANGIC] = {
+            aylar: Object.assign({}, k.aylar),
+            renkler: Object.assign({}, k.renkler || {})
+          };
+        }
+        delete k.aylar;
+        delete k.renkler;
+      }
+      yil = Number(yil) || state.aktifYil;
+      if (!k.yilVerileri[yil]) {
+        const aylar = {};
+        for (let i = 0; i < 12; i++) aylar[i] = '';
+        k.yilVerileri[yil] = { aylar: aylar, renkler: {} };
+      }
+      if (!k.yilVerileri[yil].aylar) k.yilVerileri[yil].aylar = {};
+      if (!k.yilVerileri[yil].renkler) k.yilVerileri[yil].renkler = {};
+      return k.yilVerileri[yil];
+    }
+    function getAylar(k, yil) {
+      return ensureYilData(k, yil == null ? state.aktifYil : yil).aylar;
+    }
+    function getRenkler(k, yil) {
+      return ensureYilData(k, yil == null ? state.aktifYil : yil).renkler;
+    }
+    /** Ay ödemesi gecikti mi? 25'inden sonra boşsa kırmızı */
+    function isAyGecikmis(yil, ayIndex, rawVal) {
+      const paid = rawVal === -1 || rawVal === '-1' || rawVal === '-' || rawVal === '−';
+      if (paid) return false;
+      if (cellNumericPart(rawVal) > 0) return false;
+      // Ödeme yok (boş veya sadece yazı) → tarihe göre kırmızı
+      const now = new Date();
+      const cy = now.getFullYear();
+      const cm = now.getMonth();
+      const cd = now.getDate();
+      yil = Number(yil);
+      if (yil > cy) return false;
+      if (yil < cy) return true;
+      if (ayIndex < cm) return true;
+      if (ayIndex > cm) return false;
+      return cd >= 25;
+    }
+    function setAktifYil(yil) {
+      yil = Number(yil);
+      if (!yil) return;
+      state.aktifYil = yil;
+      save();
+      refreshAll();
+      updateYearBar();
+      showToast(yil + ' yılı gösteriliyor');
+    }
+    function yildaBorcVarMi(yil) {
+      return state.borcKisiler.some(function(k) {
+        const aylar = getAylar(k, yil);
+        for (let i = 0; i < 12; i++) {
+          if (ayBorcDegeri(aylar[i]) > 0) return true;
+        }
+        return false;
+      });
+    }
+    function updateYearBar() {
+      const y = state.aktifYil || varsayilanYil();
+      [2026, 2027].forEach(function(yy) {
+        document.querySelectorAll('.year-btn-' + yy).forEach(function(btn) {
+          btn.classList.toggle('active', y === yy);
+          btn.classList.toggle('debt-hint', yy < varsayilanYil() && yildaBorcVarMi(yy));
+        });
+      });
+      const nowY = bugunYil();
+      let noteTxt = '';
+      if (y < nowY) noteTxt = 'Geçen yıl · eski borçlar';
+      else if (y > nowY) noteTxt = 'Gelecek yıl';
+      else noteTxt = 'Bu yıl';
+      document.querySelectorAll('.year-note').forEach(function(n) { n.textContent = noteTxt; });
+      const gl = document.getElementById('gelenYilLabel');
+      const bl = document.getElementById('borcYilLabel');
+      if (gl) gl.textContent = y;
+      if (bl) bl.textContent = y;
+    }
+    window.setAktifYil = setAktifYil;
     // ✎ basınca kutular açılır (silmez)
     const gelenEditMode = new Set();
     const malzemeEditMode = new Set();
@@ -637,27 +860,39 @@
     }
     function load() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        let raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) raw = localStorage.getItem('kisiMalzemeButce_v3');
         if (raw) {
           const p = JSON.parse(raw);
           state.butce = p.butce || 0;
+          state.aktifYil = p.aktifYil || varsayilanYil();
           state.kisiler = Array.isArray(p.kisiler) ? p.kisiler : [];
           state.gelenKisiler = Array.isArray(p.gelenKisiler) ? p.gelenKisiler : (Array.isArray(p.gonderimler) ? [] : []);
           state.malzemeler = Array.isArray(p.malzemeler) ? p.malzemeler : [];
           state.borcKisiler = Array.isArray(p.borcKisiler) ? p.borcKisiler : [];
+          state.gelenKisiler.forEach(function(k) { ensureYilData(k, state.aktifYil); });
+          state.borcKisiler.forEach(function(k) { ensureYilData(k, state.aktifYil); });
         }
       } catch (e) {}
     }
 
     function totalGonderilen() {
-      return state.gelenKisiler.reduce((s, k) => {
-        const aylar = k.aylar || {};
-        return s + Object.values(aylar).reduce((a, v) => a + cellNumericPart(v), 0);
+      // Tüm yıllar (genel kasa)
+      return state.gelenKisiler.reduce(function(s, k) {
+        ensureYilData(k, state.aktifYil);
+        let t = 0;
+        Object.keys(k.yilVerileri || {}).forEach(function(y) {
+          const aylar = (k.yilVerileri[y] && k.yilVerileri[y].aylar) || {};
+          Object.values(aylar).forEach(function(v) { t += cellNumericPart(v); });
+        });
+        // Eski format kalmışsa
+        if (k.aylar) Object.values(k.aylar).forEach(function(v) { t += cellNumericPart(v); });
+        return s + t;
       }, 0);
     }
-    function kisiGelenToplam(k) {
-      const aylar = k.aylar || {};
-      return Object.values(aylar).reduce((a, v) => a + cellNumericPart(v), 0);
+    function kisiGelenToplam(k, yil) {
+      const aylar = getAylar(k, yil == null ? state.aktifYil : yil);
+      return Object.values(aylar).reduce(function(a, v) { return a + cellNumericPart(v); }, 0);
     }
     function totalGider() {
       return state.malzemeler
@@ -697,12 +932,13 @@
       const list = tip === 'gelen' ? state.gelenKisiler : state.borcKisiler;
       const k = list.find(x => String(x.id) === id);
       if (!k) return;
-      if (!k.renkler) k.renkler = {};
-      if (!color) delete k.renkler[ay];
-      else k.renkler[ay] = color;
+      const renkler = getRenkler(k, state.aktifYil);
+      if (!color) delete renkler[ay];
+      else renkler[ay] = color;
       save();
       if (tip === 'gelen') renderGonderimler();
       else renderBorclar();
+      if (tableFsTip) refreshTableFullscreen();
       showToast(color ? 'Renk uygulandı' : 'Renk kaldırıldı');
     }
     function openCellColorPicker(ev, tip, id, ay) {
@@ -753,11 +989,20 @@
       if (pal) pal.classList.remove('show');
       colorPickerTarget = null;
     }
-    function totalBorc() {
-      return state.borcKisiler.reduce((s, k) => s + kisiBorcToplam(k), 0);
+    function totalBorc(yil) {
+      const yy = yil == null ? null : yil; // null = tüm yıllar özeti için aktif değil tüm
+      return state.borcKisiler.reduce(function(s, k) {
+        if (yy != null) return s + kisiBorcToplam(k, yy);
+        ensureYilData(k, state.aktifYil);
+        let t = 0;
+        Object.keys(k.yilVerileri || {}).forEach(function(y) {
+          t += kisiBorcToplam(k, Number(y));
+        });
+        return s + t;
+      }, 0);
     }
-    function kisiBorcToplam(k) {
-      const aylar = k.aylar || {};
+    function kisiBorcToplam(k, yil) {
+      const aylar = getAylar(k, yil == null ? state.aktifYil : yil);
       let top = 0;
       for (let i = 0; i < 12; i++) top += ayBorcDegeri(aylar[i]);
       return top;
@@ -771,7 +1016,7 @@
       document.getElementById('sumButce').textContent = formatMoney(state.butce);
       document.getElementById('sumGonderilen').textContent = formatMoney(totalGonderilen());
       document.getElementById('sumGider').textContent = formatMoney(totalGider());
-      document.getElementById('sumBorc').textContent = formatMoney(totalBorc());
+      document.getElementById('sumBorc').textContent = formatMoney(totalBorc(state.aktifYil));
       document.getElementById('sumKalan').textContent = formatMoney(kalan());
       document.getElementById('butceInput').value = state.butce || '';
     }
@@ -861,14 +1106,16 @@
         <thead><tr>
           <th style="position:sticky;left:0;top:0;background:#e2e8f0;z-index:3">Kişi</th>
           <th style="position:sticky;top:0;text-align:center;width:40px;z-index:2">+</th>`;
+      const _yG = state.aktifYil || varsayilanYil();
       AYLAR.forEach(a => { html += `<th style="position:sticky;top:0;text-align:center;min-width:52px;z-index:2">${a}</th>`; });
       html += `<th style="position:sticky;top:0;text-align:right;background:#dbeafe;z-index:2">Toplam</th>
           <th style="position:sticky;top:0;z-index:2"></th>
         </tr></thead><tbody>`;
 
-      const gecenAy = (buAy + 11) % 12; // geçen ay
+      const aktifYil = _yG;
       sorted.forEach((k, idx) => {
-        const aylar = k.aylar || {};
+        const aylar = getAylar(k, aktifYil);
+        const renkler = getRenkler(k, aktifYil);
         const editing = gelenEditMode.has(k.id);
         html += `<tr>
           <td style="position:sticky;left:0;background:#fff;font-weight:600;z-index:1;min-width:130px">
@@ -882,38 +1129,29 @@
         for (let i = 0; i < 12; i++) {
           const raw = aylar[i];
           const hasValue = raw !== '' && raw != null && raw !== undefined;
-          const num = Number(raw);
-          const isNum = hasValue && !isNaN(num) && String(raw).trim() !== '';
-          const isAktifAy = (i === buAy || i === gecenAy);
-          // Rakam veya yazı her zaman görünsün
-          const displayVal = hasValue ? String(raw) : '';
-          let cellStyle = '';
-          let inputStyle = '';
-          let readonly = '';
+          const num = cellNumericPart(raw);
+          const isPaid = raw === -1 || raw === '-1' || raw === '-' || raw === '−';
+          const isNum = hasValue && num > 0 && !isPaid;
+          const isText = hasValue && !isPaid && !(typeof raw === 'number' || (hasValue && !isNaN(Number(String(raw).replace(',','.'))) && String(raw).trim() !== '' && cellNumericPart(raw) > 0 && /^[+-]?\d/.test(String(raw).trim())));
+          // Simplify isText
+          const pureNum = hasValue && !isPaid && typeof raw !== 'string' ? (num > 0) : (hasValue && !isPaid && /^[+-]?\d+([.,]\d+)?$/.test(String(raw).trim()));
+          const displayVal = isPaid ? '−' : (hasValue ? String(raw) : '');
+          let cellStyle = 'background:#fff;';
+          let inputStyle = 'background:#fff;border-color:#e2e8f0;color:#0f172a;';
 
-          if (isNum && num > 0) {
-            // Sayısal tutar → yeşil
+          if (pureNum || (isNum && !isPaid)) {
             cellStyle = 'background:#dcfce7;';
             inputStyle = 'background:#bbf7d0;border-color:#22c55e;color:#166534;font-weight:700;';
-            if (!editing && !isAktifAy) readonly = 'readonly';
-          } else if (hasValue) {
-            // Yazı / not → turuncu-sarı
-            cellStyle = 'background:#fef3c7;';
-            inputStyle = 'background:#fde68a;border-color:#f59e0b;color:#92400e;font-weight:600;';
-            if (!editing && !isAktifAy) readonly = 'readonly';
-          } else if (editing || isAktifAy) {
-            // Boş ama yazılabilir → kırmızı
-            cellStyle = 'background:#fee2e2;';
-            inputStyle = 'background:#fecaca;border-color:#f87171;color:#991b1b;';
+          } else if (hasValue && !isPaid && !(pureNum || isNum)) {
+            cellStyle = 'background:#e0e7ff;';
+            inputStyle = 'background:#c7d2fe;border-color:#6366f1;color:#312e81;font-weight:600;';
           } else {
-            // Boş + kilitli → kırmızı
-            cellStyle = 'background:#fee2e2;';
-            inputStyle = 'background:#fecaca;border-color:#f87171;color:#991b1b;';
-            readonly = 'readonly';
+            // Boş kutu her zaman beyaz — kullanıcı isterse renk seçer
+            cellStyle = 'background:#fff;';
+            inputStyle = 'background:#fff;border-color:#e2e8f0;';
           }
-          if (editing) readonly = '';
 
-          const customColor = (k.renkler && k.renkler[i]) ? k.renkler[i] : '';
+          const customColor = renkler[i] || '';
           if (customColor) {
             cellStyle = 'background:' + customColor + ';';
             inputStyle = 'background:' + customColor + ';border-color:#94a3b8;color:#0f172a;font-weight:600;';
@@ -925,10 +1163,9 @@
                 data-gelen-id="${k.id}" data-ay="${i}"
                 style="width:100%;border:1px solid #e2e8f0;border-radius:4px;padding:4px 2px;text-align:right;font-size:0.8rem;${inputStyle}"
                 value="${escape(displayVal)}"
-                ${readonly}
                 onchange="updateGelenAy('${k.id}', ${i}, this.value)"
                 onblur="updateGelenAy('${k.id}', ${i}, this.value)"
-                placeholder="${(editing || isAktifAy) && !hasValue ? '250 / not' : ''}">
+                placeholder="">
               <button type="button" class="cell-color-btn" title="Renk seç"
                 style="background:${customColor || '#e2e8f0'}"
                 onclick="openCellColorPicker(event,'gelen','${k.id}',${i})"></button>
@@ -1054,8 +1291,10 @@
           <th style="position:sticky;top:0;z-index:2"></th>
         </tr></thead><tbody>`;
 
+      const aktifYil = state.aktifYil || varsayilanYil();
       sortedBorc.forEach((k, idx) => {
-        const aylar = k.aylar || {};
+        const aylar = getAylar(k, aktifYil);
+        const renkler = getRenkler(k, aktifYil);
         const kid = String(k.id);
         html += `<tr>
           <td style="position:sticky;left:0;background:#fff;font-weight:600;z-index:1;min-width:130px">
@@ -1070,29 +1309,32 @@
           const raw = aylar[i];
           const isPaid = raw === -1 || raw === '-1' || raw === '-' || raw === '−';
           const num = cellNumericPart(raw);
-          const hasText = !isPaid && raw !== '' && raw != null && typeof raw === 'string' && isNaN(Number(String(raw).replace(',', '.')));
+          const pureNum = !isPaid && raw !== '' && raw != null && /^[+-]?\d+([.,]\d+)?$/.test(String(raw).trim());
           let displayVal = '';
           if (isPaid) displayVal = '−';
           else if (raw !== '' && raw != null && raw !== undefined) displayVal = String(raw);
 
-          const customColor = (k.renkler && k.renkler[i]) ? k.renkler[i] : '';
-          let cellStyle = '';
-          let inputStyle = '';
-          if (customColor) {
-            cellStyle = 'background:' + customColor + ';';
-            inputStyle = 'background:' + customColor + ';border-color:#94a3b8;color:#0f172a;font-weight:600;';
-          } else if (isPaid) {
+          let cellStyle = 'background:#fff;';
+          let inputStyle = 'background:#fff;border-color:#e2e8f0;';
+          if (isPaid) {
             cellStyle = 'background:#dcfce7;';
             inputStyle = 'background:#bbf7d0;border-color:#22c55e;color:#166534;font-weight:700;';
-          } else if (num > 0 && !hasText) {
-            cellStyle = 'background:#fef3c7;';
-            inputStyle = 'background:#fde68a;border-color:#f59e0b;color:#92400e;font-weight:700;';
-          } else if (hasText) {
+          } else if (pureNum || num > 0) {
+            cellStyle = 'background:#dcfce7;';
+            inputStyle = 'background:#bbf7d0;border-color:#22c55e;color:#166534;font-weight:700;';
+          } else if (raw !== '' && raw != null && !isPaid) {
             cellStyle = 'background:#e0e7ff;';
             inputStyle = 'background:#c7d2fe;border-color:#6366f1;color:#312e81;font-weight:600;';
           } else {
+            // Boş kutu her zaman beyaz — kullanıcı isterse renk seçer
             cellStyle = 'background:#fff;';
-            inputStyle = 'background:#f8fafc;border-color:#e2e8f0;';
+            inputStyle = 'background:#fff;border-color:#e2e8f0;';
+          }
+
+          const customColor = renkler[i] || '';
+          if (customColor) {
+            cellStyle = 'background:' + customColor + ';';
+            inputStyle = 'background:' + customColor + ';border-color:#94a3b8;color:#0f172a;font-weight:600;';
           }
 
           html += `<td style="padding:2px;${cellStyle}">
@@ -1126,13 +1368,152 @@
         <td style="position:sticky;left:0;background:#f1f5f9;z-index:1">TOPLAM</td>
         <td></td>`;
       for (let i = 0; i < 12; i++) {
-        const ayTop = state.borcKisiler.reduce((s, k) => s + ayBorcDegeri((k.aylar || {})[i]), 0);
+        const ayTop = state.borcKisiler.reduce((s, k) => s + ayBorcDegeri(getAylar(k, state.aktifYil)[i]), 0);
         html += `<td class="num">${ayTop ? formatMoney(ayTop) : '—'}</td>`;
       }
-      html += `<td class="num" style="background:#fef3c7;color:var(--red)">${formatMoney(totalBorc())}</td>
+      html += `<td class="num" style="background:#fef3c7;color:var(--red)">${formatMoney(totalBorc(state.aktifYil))}</td>
         <td></td>
       </tr></tbody></table></div>`;
       list.innerHTML = html;
+    }
+
+    // --- TABLO TAM EKRAN ---
+    let tableFsTip = null;
+    let tableFsDrag = null;
+
+    function openTableFullscreen(tip) {
+      tip = tip === 'borc' ? 'borc' : 'gelen';
+      tableFsTip = tip;
+      const overlay = document.getElementById('tableFsOverlay');
+      const sheet = document.getElementById('tableFsSheet');
+      const title = document.getElementById('tableFsTitle');
+      const body = document.getElementById('tableFsBody');
+      if (!overlay || !sheet || !body) return;
+      if (title) {
+        title.textContent = tip === 'borc' ? '📋 Eski Borç Tablosu' : '📋 Gelen Tablosu';
+      }
+      // Normal listedeki HTML'i kopyala (aynı interaktif inputlar)
+      const srcId = tip === 'borc' ? 'borcList' : 'gonderimList';
+      const src = document.getElementById(srcId);
+      body.innerHTML = src ? src.innerHTML : '<div class="empty">Kayıt yok</div>';
+      // Fullscreen'te max-height kısıtını kaldır (CSS zaten yapıyor)
+      overlay.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+      sheet.classList.remove('dragging');
+      sheet.style.transform = 'translateY(100%)';
+      requestAnimationFrame(function() {
+        sheet.style.transform = 'translateY(0)';
+      });
+    }
+
+    function closeTableFullscreen() {
+      const overlay = document.getElementById('tableFsOverlay');
+      const sheet = document.getElementById('tableFsSheet');
+      if (!overlay || !sheet) return;
+      const tip = tableFsTip;
+      sheet.classList.remove('dragging');
+      sheet.style.transform = 'translateY(100%)';
+      setTimeout(function() {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+        const body = document.getElementById('tableFsBody');
+        if (body) body.innerHTML = '';
+        tableFsTip = null;
+        // Ana listedeki tabloyu güncelle
+        if (tip === 'borc') renderBorclar();
+        else if (tip === 'gelen') renderGonderimler();
+        updateSummary();
+      }, 280);
+    }
+
+    function refreshTableFullscreen() {
+      if (!tableFsTip) return;
+      const body = document.getElementById('tableFsBody');
+      if (!body) return;
+      // Önce normal paneli güncelle, sonra kopyala
+      if (tableFsTip === 'borc') renderBorclar();
+      else renderGonderimler();
+      const srcId = tableFsTip === 'borc' ? 'borcList' : 'gonderimList';
+      const src = document.getElementById(srcId);
+      if (src) body.innerHTML = src.innerHTML;
+    }
+
+    function setupTableFsDrag() {
+      const handle = document.getElementById('tableFsHandle');
+      const header = document.getElementById('tableFsHeader');
+      const sheet = document.getElementById('tableFsSheet');
+      const body = document.getElementById('tableFsBody');
+      if (!handle || !sheet) return;
+
+      function onStart(clientY) {
+        tableFsDrag = { startY: clientY, dy: 0, active: true };
+        sheet.classList.add('dragging');
+      }
+      function onMove(clientY) {
+        if (!tableFsDrag || !tableFsDrag.active) return;
+        var dy = clientY - tableFsDrag.startY;
+        if (dy < 0) dy = 0;
+        tableFsDrag.dy = dy;
+        sheet.style.transform = 'translateY(' + dy + 'px)';
+      }
+      function onEnd() {
+        if (!tableFsDrag || !tableFsDrag.active) return;
+        var dy = tableFsDrag.dy || 0;
+        tableFsDrag = null;
+        sheet.classList.remove('dragging');
+        if (dy > 100) {
+          closeTableFullscreen();
+        } else {
+          sheet.style.transform = 'translateY(0)';
+        }
+      }
+
+      // Handle + header: aşağı sürükle → kapat
+      [handle, header].forEach(function(el) {
+        if (!el || el.dataset.dragBound) return;
+        el.dataset.dragBound = '1';
+        el.addEventListener('touchstart', function(e) {
+          if (!e.touches || !e.touches[0]) return;
+          onStart(e.touches[0].clientY);
+        }, { passive: true });
+        el.addEventListener('touchmove', function(e) {
+          if (!tableFsDrag || !tableFsDrag.active) return;
+          if (!e.touches || !e.touches[0]) return;
+          onMove(e.touches[0].clientY);
+          if (tableFsDrag.dy > 8) e.preventDefault();
+        }, { passive: false });
+        el.addEventListener('touchend', onEnd);
+        el.addEventListener('touchcancel', onEnd);
+        el.addEventListener('mousedown', function(e) {
+          onStart(e.clientY);
+          function mm(ev) { onMove(ev.clientY); }
+          function mu() {
+            document.removeEventListener('mousemove', mm);
+            document.removeEventListener('mouseup', mu);
+            onEnd();
+          }
+          document.addEventListener('mousemove', mm);
+          document.addEventListener('mouseup', mu);
+        });
+      });
+
+      // Body: en üstteyken aşağı çekince kapat
+      if (body && !body.dataset.dragBound) {
+        body.dataset.dragBound = '1';
+        body.addEventListener('touchstart', function(e) {
+          if (!e.touches || !e.touches[0]) return;
+          if (body.scrollTop <= 0) onStart(e.touches[0].clientY);
+          else tableFsDrag = null;
+        }, { passive: true });
+        body.addEventListener('touchmove', function(e) {
+          if (!tableFsDrag || !tableFsDrag.active) return;
+          if (!e.touches || !e.touches[0]) return;
+          onMove(e.touches[0].clientY);
+          if (tableFsDrag.dy > 8) e.preventDefault();
+        }, { passive: false });
+        body.addEventListener('touchend', onEnd);
+        body.addEventListener('touchcancel', onEnd);
+      }
     }
 
     function openTumIslemler() {
@@ -1296,6 +1677,7 @@
 
     function refreshAll() {
       updateSummary();
+      updateYearBar();
       renderKisiler();
       fillGelenKisiSelect();
       fillBorcKisiSelect();
@@ -1419,9 +1801,9 @@
           showToast('Bu kişi zaten gelen listesinde');
           return;
         }
-        const aylar = {};
-        for (let i = 0; i < 12; i++) aylar[i] = '';
-        state.gelenKisiler.push({ id: uid(), ad: isim, aylar });
+        const row = { id: uid(), ad: isim, yilVerileri: {} };
+        ensureYilData(row, state.aktifYil || varsayilanYil());
+        state.gelenKisiler.push(row);
         if (!state.kisiler.some(k => k.ad === isim)) {
           state.kisiler.push({ id: uid(), ad: isim, not: '' });
         }
@@ -1437,23 +1819,13 @@
     }
 
     function updateGelenAy(kisiId, ayIndex, value) {
-      const k = state.gelenKisiler.find(x => x.id === kisiId);
+      const k = state.gelenKisiler.find(x => String(x.id) === String(kisiId));
       if (!k) return;
-      if (!k.aylar) k.aylar = {};
-      const v = String(value == null ? '' : value).trim();
-      if (v === '' || v === '-') {
-        k.aylar[ayIndex] = '';
-      } else {
-        // Rakam ise sayı olarak, değilse yazı olarak sakla
-        const normalized = v.replace(',', '.');
-        const n = parseFloat(normalized);
-        if (!isNaN(n) && String(n) === normalized) {
-          k.aylar[ayIndex] = n;
-        } else {
-          k.aylar[ayIndex] = v; // yazı / not
-        }
-      }
-      syncBorcFromGelen(k.ad, ayIndex, k.aylar[ayIndex]);
+      const aylar = getAylar(k, state.aktifYil);
+      let parsed = parseCellValue(value);
+      if (parsed === -1) parsed = '';
+      aylar[ayIndex] = parsed;
+      syncBorcFromGelen(k.ad, ayIndex, aylar[ayIndex]);
       save();
       updateSummary();
       renderTumIslemler();
@@ -1461,43 +1833,37 @@
 
     // Satırdaki tüm inputları state'e yaz (düzenleme kapanırken)
     function harvestGelenRow(kisiId) {
-      const k = state.gelenKisiler.find(x => x.id === kisiId);
+      const k = state.gelenKisiler.find(x => String(x.id) === String(kisiId));
       if (!k) return;
-      if (!k.aylar) k.aylar = {};
-      const inputs = document.querySelectorAll(`input[data-gelen-id="${kisiId}"]`);
-      inputs.forEach(inp => {
+      const aylar = getAylar(k, state.aktifYil);
+      document.querySelectorAll(`input[data-gelen-id="${kisiId}"]`).forEach(inp => {
         const ay = parseInt(inp.getAttribute('data-ay'), 10);
         if (isNaN(ay)) return;
-        const v = String(inp.value || '').trim();
-        if (v === '') k.aylar[ay] = '';
-        else {
-          const normalized = v.replace(',', '.');
-          const n = parseFloat(normalized);
-          if (!isNaN(n) && String(n) === normalized) {
-            k.aylar[ay] = n;
-          } else {
-            k.aylar[ay] = v; // yazı / not
-          }
-        }
-        syncBorcFromGelen(k.ad, ay, k.aylar[ay]);
+        let parsed = parseCellValue(inp.value);
+        if (parsed === -1) parsed = '';
+        aylar[ay] = parsed;
+        syncBorcFromGelen(k.ad, ay, aylar[ay]);
       });
       save();
       updateSummary();
     }
 
     function gelenAyEkle250(kisiId) {
-      const k = state.gelenKisiler.find(x => x.id === kisiId);
+      const k = state.gelenKisiler.find(x => String(x.id) === String(kisiId));
       if (!k) return;
-      if (!k.aylar) k.aylar = {};
       const buAy = new Date().getMonth();
-      // + basınca bu aya yeşil 250 yaz (üzerine yazar)
-      k.aylar[buAy] = 250;
+      const yil = state.aktifYil || varsayilanYil();
+      const aylar = getAylar(k, yil);
+      aylar[buAy] = 250;
+      const renkler = getRenkler(k, yil);
+      delete renkler[buAy];
       syncBorcFromGelen(k.ad, buAy, 250);
       save();
       updateSummary();
       renderGonderimler();
       renderBorclar();
-      showToast(AYLAR[buAy] + ' → 250 ₺ (yeşil)');
+      showToast(AYLAR[buAy] + ' ' + yil + ' → 250 ₺ (yeşil)');
+      if (tableFsTip) refreshTableFullscreen();
     }
 
     function toggleGelenDuzenle(kisiId) {
@@ -1517,17 +1883,15 @@
     function syncBorcFromGelen(ad, ayIndex, gelenTutar) {
       let borcK = state.borcKisiler.find(b => b.ad === ad);
       if (!borcK) {
-        const aylar = {};
-        for (let i = 0; i < 12; i++) aylar[i] = '';
-        borcK = { id: uid(), ad, aylar };
+        borcK = { id: uid(), ad: ad, yilVerileri: {} };
+        ensureYilData(borcK, state.aktifYil);
         state.borcKisiler.push(borcK);
       }
-      if (!borcK.aylar) borcK.aylar = {};
-      // Gelen tutarı varsa o ay ödendi (-)
-      if (Number(gelenTutar) > 0) {
-        borcK.aylar[ayIndex] = -1;
-      } else if (borcK.aylar[ayIndex] === -1) {
-        borcK.aylar[ayIndex] = ''; // geri al
+      const aylar = getAylar(borcK, state.aktifYil);
+      if (cellNumericPart(gelenTutar) > 0) {
+        aylar[ayIndex] = -1; // ödendi
+      } else if (aylar[ayIndex] === -1) {
+        aylar[ayIndex] = '';
       }
     }
 
@@ -1540,6 +1904,7 @@
       state.gelenKisiler = state.gelenKisiler.filter(x => String(x.id) !== id);
       save();
       refreshAll();
+      if (tableFsTip === 'gelen') refreshTableFullscreen();
       showToast((k.ad || 'Kayıt') + ' silindi', true);
     }
 
@@ -1617,9 +1982,9 @@
           showToast('Bu kişi zaten borç listesinde');
           return;
         }
-        const aylar = {};
-        for (let i = 0; i < 12; i++) aylar[i] = '';
-        state.borcKisiler.push({ id: uid(), ad: isim, aylar });
+        const row = { id: uid(), ad: isim, yilVerileri: {} };
+        ensureYilData(row, state.aktifYil || varsayilanYil());
+        state.borcKisiler.push(row);
         if (!state.kisiler.some(k => k.ad === isim)) {
           state.kisiler.push({ id: uid(), ad: isim, not: '' });
         }
@@ -1638,22 +2003,26 @@
       kisiId = String(kisiId);
       const k = state.borcKisiler.find(x => String(x.id) === kisiId);
       if (!k) return;
-      if (!k.aylar) k.aylar = {};
       const buAy = new Date().getMonth();
-      k.aylar[buAy] = 250;
+      const yil = state.aktifYil || varsayilanYil();
+      const aylar = getAylar(k, yil);
+      aylar[buAy] = 250;
+      const renkler = getRenkler(k, yil);
+      delete renkler[buAy];
       save();
       updateSummary();
       renderBorclar();
       renderTumIslemler();
-      showToast(AYLAR[buAy] + ' → 250 ₺');
+      showToast(AYLAR[buAy] + ' ' + yil + ' → 250 ₺ (yeşil)');
+      if (tableFsTip === 'borc') refreshTableFullscreen();
     }
 
     function updateBorcAy(kisiId, ayIndex, value) {
       kisiId = String(kisiId);
       const k = state.borcKisiler.find(x => String(x.id) === kisiId);
       if (!k) return;
-      if (!k.aylar) k.aylar = {};
-      k.aylar[ayIndex] = parseCellValue(value);
+      const aylar = getAylar(k, state.aktifYil);
+      aylar[ayIndex] = parseCellValue(value);
       save();
       updateSummary();
       renderTumIslemler();
@@ -1663,11 +2032,11 @@
       kisiId = String(kisiId);
       const k = state.borcKisiler.find(x => String(x.id) === kisiId);
       if (!k) return;
-      if (!k.aylar) k.aylar = {};
+      const aylar = getAylar(k, state.aktifYil);
       document.querySelectorAll(`input[data-borc-id="${kisiId}"]`).forEach(inp => {
         const ay = parseInt(inp.getAttribute('data-ay'), 10);
         if (isNaN(ay)) return;
-        k.aylar[ay] = parseCellValue(inp.value);
+        aylar[ay] = parseCellValue(inp.value);
       });
       save();
       updateSummary();
@@ -1680,6 +2049,7 @@
       harvestBorcRow(kisiId);
       renderBorclar();
       showToast('Borç kaydedildi · toplamlar güncellendi');
+      if (tableFsTip === 'borc') refreshTableFullscreen();
     }
 
     function updateMalzemeField(id, field, value) {
@@ -1725,6 +2095,7 @@
       state.borcKisiler = state.borcKisiler.filter(x => String(x.id) !== id);
       save();
       refreshAll();
+      if (tableFsTip === 'borc') refreshTableFullscreen();
       showToast((k.ad || 'Kayıt') + ' silindi', true);
     }
 
@@ -1736,7 +2107,7 @@
 
     function clearAll() {
       if (!confirm('Tüm veriler silinecek. Emin misiniz?')) return;
-      state = { butce: 0, kisiler: [], gelenKisiler: [], malzemeler: [], borcKisiler: [] };
+      state = { butce: 0, aktifYil: varsayilanYil(), kisiler: [], gelenKisiler: [], malzemeler: [], borcKisiler: [] };
       save();
       refreshAll();
       showToast('Tüm veriler temizlendi');
@@ -2054,12 +2425,16 @@
     window.switchTab = switchTab;
     window.openTumIslemler = openTumIslemler;
     window.closeTumIslemler = closeTumIslemler;
+    window.openTableFullscreen = openTableFullscreen;
+    window.closeTableFullscreen = closeTableFullscreen;
     window.renderTumIslemler = renderTumIslemler;
 
     // Overlay boşluğuna tıklayınca kapat
     document.addEventListener('click', function(ev) {
       const overlay = document.getElementById('tumIslemlerOverlay');
       if (overlay && ev.target === overlay) closeTumIslemler();
+      const tfs = document.getElementById('tableFsOverlay');
+      if (tfs && ev.target === tfs) closeTableFullscreen();
       const pal = document.getElementById('cellColorPalette');
       if (pal && pal.classList.contains('show') && !pal.contains(ev.target) && !(ev.target.closest && ev.target.closest('.cell-color-btn'))) {
         closeCellColorPicker();
@@ -2132,6 +2507,7 @@
     refreshAll();
     loadPhoto();
     setupPhotoUpload();
+    setupTableFsDrag();
   </script>
 </body>
 </html>
