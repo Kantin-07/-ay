@@ -468,7 +468,7 @@
       <div class="value" id="sumButce">0 ₺</div>
     </div>
     <div class="summary-card gonderilen">
-      <div class="label">Gelen</div>
+      <div class="label">Verenler</div>
       <div class="value" id="sumGonderilen">0 ₺</div>
     </div>
     <div class="summary-card gider">
@@ -496,7 +496,7 @@
   <!-- SEKMELER -->
   <div class="tabs">
     <button class="tab active" data-tab="kisiler" onclick="switchTab('kisiler')">👥 Kişiler</button>
-    <button class="tab" data-tab="gonderimler" onclick="switchTab('gonderimler')">💸 Gelen</button>
+    <button class="tab" data-tab="gonderimler" onclick="switchTab('gonderimler')">💸 Verenler</button>
     <button class="tab" data-tab="malzemeler" onclick="switchTab('malzemeler')">🛒 Malzemeler</button>
     <button class="tab" data-tab="borclar" onclick="switchTab('borclar')">📋 Eski Borç</button>
   </div>
@@ -524,7 +524,7 @@
   <!-- GÖNDERİMLER -->
   <div id="panel-gonderimler" class="panel" style="display:none">
     <div class="card">
-      <h2>➕ Gelen Kişi Ekle</h2>
+      <h2>➕ Veren Kişi Ekle</h2>
       <div class="field">
         <label>Kişiler listesinden seç</label>
         <select id="gelenKisiSec">
@@ -547,7 +547,7 @@
       </div>
       <h2 style="margin:0">
         <button type="button" class="table-fs-title-btn" onclick="openTableFullscreen('gelen')" title="Tam ekran">
-          <span>📋 Gelen Tablosu · <span id="gelenYilLabel"></span></span>
+          <span>📋 Verenler Tablosu · <span id="gelenYilLabel"></span></span>
         </button>
       </h2>
       <div id="gonderimList" style="margin-top:10px"></div>
@@ -634,7 +634,7 @@
       <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #e2e8f0;background:#fff;">
         <div>
           <div style="font-size:1.05rem;font-weight:800;color:#0f172a;">📊 Tüm İşlemler</div>
-          <div style="font-size:0.72rem;color:#64748b;">Gelen · Vermeyen · Borç · Alınan</div>
+          <div style="font-size:0.72rem;color:#64748b;">Verenler · Vermeyen · Borç · Alınan</div>
         </div>
         <button type="button" onclick="closeTumIslemler()"
           style="width:36px;height:36px;border:none;border-radius:50%;background:#f1f5f9;color:#334155;font-size:1.2rem;cursor:pointer;font-weight:700;">✕</button>
@@ -670,7 +670,7 @@
       <button class="btn btn-outline" onclick="document.getElementById('excelFile').click()">Excel’den Yükle</button>
       <input type="file" id="excelFile" accept=".csv,text/csv" style="display:none" onchange="importExcel(event)" />
     </div>
-    <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">“Excel’e Aktar” ile profesyonel çok sayfalı .xlsx iner (Özet, Kişiler, Gönderimler, Malzemeler…).</p>
+    <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">“Excel’e Aktar” ile profesyonel çok sayfalı .xlsx iner (Özet, Kişiler, Verenler, Malzemeler…).</p>
   </div>
 
     <div id="cellColorPalette" role="dialog" aria-label="Renk seç">
@@ -1049,7 +1049,7 @@
           <th style="width:36px;text-align:center">#</th>
           <th>Ad Soyad</th>
           <th>Not</th>
-          <th style="text-align:right">Toplam Gelen</th>
+          <th style="text-align:right">Toplam Verenler</th>
           <th style="width:88px"></th>
         </tr></thead><tbody>`;
       sorted.forEach((k, idx) => {
@@ -1095,7 +1095,7 @@
     function renderGonderimler() {
       const list = document.getElementById('gonderimList');
       if (state.gelenKisiler.length === 0) {
-        list.innerHTML = '<div class="empty">Henüz gelen kişi yok. Yukarıdan ekleyin.</div>';
+        list.innerHTML = '<div class="empty">Henüz veren kişi yok. Yukarıdan ekleyin.</div>';
         return;
       }
       const sorted = [...state.gelenKisiler].sort((a, b) =>
@@ -1192,7 +1192,7 @@
         <td style="position:sticky;left:0;background:#f1f5f9;z-index:1">TOPLAM</td>
         <td></td>`;
       for (let i = 0; i < 12; i++) {
-        const ayTop = state.gelenKisiler.reduce((s, k) => s + (Number((k.aylar || {})[i]) || 0), 0);
+        const ayTop = state.gelenKisiler.reduce((s, k) => s + (Number(getAylar(k)[i]) || 0), 0);
         html += `<td class="num">${ayTop ? formatMoney(ayTop) : '—'}</td>`;
       }
       html += `<td class="num" style="background:#dbeafe;color:var(--primary)">${formatMoney(totalGonderilen())}</td>
@@ -1390,7 +1390,7 @@
       const body = document.getElementById('tableFsBody');
       if (!overlay || !sheet || !body) return;
       if (title) {
-        title.textContent = tip === 'borc' ? '📋 Eski Borç Tablosu' : '📋 Gelen Tablosu';
+        title.textContent = tip === 'borc' ? '📋 Eski Borç Tablosu' : '📋 Verenler Tablosu';
       }
       // Normal listedeki HTML'i kopyala (aynı interaktif inputlar)
       const srcId = tip === 'borc' ? 'borcList' : 'gonderimList';
@@ -1545,15 +1545,16 @@
       const buAy = new Date().getMonth();
       const ayAd = AYLAR[buAy];
 
-      // --- GELEN bu ay ---
+      // --- VERENLER bu ay ---
       const verenler = [];
       const vermeyenler = [];
       state.gelenKisiler.forEach(k => {
-        const v = Number((k.aylar || {})[buAy]) || 0;
+        const aylar = getAylar(k);
+        const v = Number(aylar[buAy]) || 0;
         if (v > 0) verenler.push({ ad: k.ad, tutar: v });
         else vermeyenler.push({ ad: k.ad });
       });
-      // Kişilerde olup gelende olmayanlar da vermeyen
+      // Kişilerde olup verenlerde olmayanlar da vermeyen
       state.kisiler.forEach(k => {
         if (!state.gelenKisiler.some(g => g.ad === k.ad) &&
             !vermeyenler.some(v => v.ad === k.ad) &&
@@ -1566,11 +1567,12 @@
       const borclu = [];
       const borcOdendi = [];
       state.borcKisiler.forEach(k => {
-        const raw = (k.aylar || {})[buAy];
+        const aylar = getAylar(k);
+        const raw = aylar[buAy];
         const isPaid = raw === -1 || raw === '-1' || raw === '-';
         const tutar = ayBorcDegeri(raw);
         if (isPaid) borcOdendi.push({ ad: k.ad });
-        else borclu.push({ ad: k.ad, tutar });
+        else if (tutar > 0) borclu.push({ ad: k.ad, tutar });
       });
 
       // --- MALZEME ---
@@ -1600,9 +1602,9 @@
       </div>`;
 
       // Verenler tablosu
-      html += `<h3 style="font-size:0.9rem;margin:12px 0 6px;color:#166534">✅ Gelen / Verenler (${ayAd})</h3>`;
+      html += `<h3 style="font-size:0.9rem;margin:12px 0 6px;color:#166534">✅ Verenler (${ayAd})</h3>`;
       if (verenler.length === 0) {
-        html += `<div class="empty">Bu ay henüz gelen yok</div>`;
+        html += `<div class="empty">Bu ay henüz veren yok</div>`;
       } else {
         html += `<table class="excel-table"><thead><tr><th>Kişi</th><th style="text-align:right">Tutar</th><th>Durum</th></tr></thead><tbody>`;
         verenler.sort((a,b) => a.ad.localeCompare(b.ad,'tr')).forEach(v => {
@@ -1668,7 +1670,7 @@
         <div style="font-size:0.75rem;color:#166534">ELİMİZDEKİ PARA</div>
         <div style="font-size:1.4rem;font-weight:800;color:#16a34a">${formatMoney(kalan())}</div>
         <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">
-          Bütçe ${formatMoney(state.butce)} + Gelen ${formatMoney(totalGonderilen())} − Gider ${formatMoney(totalGider())}
+          Bütçe ${formatMoney(state.butce)} + Verenler ${formatMoney(totalGonderilen())} − Gider ${formatMoney(totalGider())}
         </div>
       </div>`;
 
@@ -1798,7 +1800,7 @@
         isim = (isim || '').trim();
         if (!isim) { showToast('Kişi seçin veya isim yazın'); return; }
         if (state.gelenKisiler.some(k => k.ad === isim)) {
-          showToast('Bu kişi zaten gelen listesinde');
+          showToast('Bu kişi zaten verenler listesinde');
           return;
         }
         const row = { id: uid(), ad: isim, yilVerileri: {} };
@@ -2131,7 +2133,7 @@
         ['ÖZET'],
         ['Kalem', 'Tutar (₺)'],
         ['Toplam Başlangıç Bütçesi', state.butce],
-        ['Toplam Gelen', totalGonderilen()],
+        ['Toplam Verenler', totalGonderilen()],
         ['Toplam Gider (Alınanlar)', totalGider()],
         ['Bekleyen Gider', state.malzemeler.filter(m => m.alindi !== 'Evet').reduce((s, m) => s + (Number(m.fiyat) * Number(m.miktar)), 0)],
         ['Toplam Alacak (Eski Borç)', totalBorc()],
@@ -2139,7 +2141,7 @@
         [],
         ['SAYILAR'],
         ['Kişi Sayısı', state.kisiler.length],
-        ['Gelen Kayıt Sayısı', state.gelenKisiler.length],
+        ['Verenler Kayıt Sayısı', state.gelenKisiler.length],
         ['Malzeme Kalemi', state.malzemeler.length],
         ['Alınan Malzeme', state.malzemeler.filter(m => m.alindi === 'Evet').length],
         ['Bekleyen Malzeme', state.malzemeler.filter(m => m.alindi !== 'Evet').length],
@@ -2150,7 +2152,7 @@
       XLSX.utils.book_append_sheet(wb, wsOzet, 'Özet');
 
       // ========== 2. KİŞİLER ==========
-      const kisiRows = [['No', 'Ad Soyad', 'Toplam Gelen (₺)', 'Toplam Alacak (₺)', 'Not']];
+      const kisiRows = [['No', 'Ad Soyad', 'Toplam Verenler (₺)', 'Toplam Alacak (₺)', 'Not']];
       const sortedKisiler = [...state.kisiler].sort((a, b) => (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' }));
       sortedKisiler.forEach((k, idx) => {
         const gelenK = state.gelenKisiler.find(g => g.ad === k.ad);
@@ -2172,7 +2174,7 @@
       const gonRows = [['Ay', 'Kişi', 'Tutar (₺)', 'Açıklama']];
       const sortedGelen = [...state.gelenKisiler].sort((a, b) => (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' }));
       sortedGelen.forEach(k => {
-        const aylar = k.aylar || {};
+        const aylar = getAylar(k);
         for (let i = 0; i < 12; i++) {
           const v = Number(aylar[i]) || 0;
           if (v > 0) {
@@ -2189,7 +2191,7 @@
       const gelenOzetHeader = ['Kişi', ...AYLAR, 'Toplam'];
       const gelenOzetRows = [gelenOzetHeader];
       sortedGelen.forEach(k => {
-        const aylar = k.aylar || {};
+        const aylar = getAylar(k);
         const row = [k.ad];
         for (let i = 0; i < 12; i++) {
           row.push(Number(aylar[i]) || '');
@@ -2199,13 +2201,13 @@
       });
       const topGelen = ['TOPLAM'];
       for (let i = 0; i < 12; i++) {
-        topGelen.push(state.gelenKisiler.reduce((s, k) => s + (Number((k.aylar || {})[i]) || 0), 0) || '');
+        topGelen.push(state.gelenKisiler.reduce((s, k) => s + (Number(getAylar(k)[i]) || 0), 0) || '');
       }
       topGelen.push(totalGonderilen());
       gelenOzetRows.push(topGelen);
       const wsGelenOzet = XLSX.utils.aoa_to_sheet(gelenOzetRows);
       wsGelenOzet['!cols'] = [{ wch: 18 }, ...Array(12).fill({ wch: 7 }), { wch: 10 }];
-      XLSX.utils.book_append_sheet(wb, wsGelenOzet, 'Gelen Özet');
+      XLSX.utils.book_append_sheet(wb, wsGelenOzet, 'Verenler Özet');
 
       // ========== 5. MALZEMELER ==========
       const malRows = [['Malzeme Adı', 'Birim Fiyat (₺)', 'Miktar', 'Alındı mı?', 'Toplam (₺)', 'Not']];
@@ -2232,7 +2234,7 @@
       const borcRows = [borcHeader];
       const sortedBorc = [...state.borcKisiler].sort((a, b) => (a.ad || '').localeCompare(b.ad || '', 'tr', { sensitivity: 'base' }));
       sortedBorc.forEach(k => {
-        const aylar = k.aylar || {};
+        const aylar = getAylar(k);
         const row = [k.ad];
         for (let i = 0; i < 12; i++) {
           const raw = aylar[i];
@@ -2245,7 +2247,7 @@
       });
       const topBorc = ['TOPLAM'];
       for (let i = 0; i < 12; i++) {
-        topBorc.push(state.borcKisiler.reduce((s, k) => s + ayBorcDegeri((k.aylar || {})[i]), 0) || '');
+        topBorc.push(state.borcKisiler.reduce((s, k) => s + ayBorcDegeri(getAylar(k)[i]), 0) || '');
       }
       topBorc.push(totalBorc());
       borcRows.push(topBorc);
@@ -2254,9 +2256,9 @@
       XLSX.utils.book_append_sheet(wb, wsBorc, 'Eski Borç');
 
       // ========== 7. AYLIK ÖZET ==========
-      const ayRows = [['Ay', 'Toplam Gelen (₺)']];
+      const ayRows = [['Ay', 'Toplam Verenler (₺)']];
       for (let i = 0; i < 12; i++) {
-        const ayTop = state.gelenKisiler.reduce((s, k) => s + (Number((k.aylar || {})[i]) || 0), 0);
+        const ayTop = state.gelenKisiler.reduce((s, k) => s + (Number(getAylar(k)[i]) || 0), 0);
         ayRows.push([AYLAR[i], ayTop]);
       }
       ayRows.push(['GENEL TOPLAM', totalGonderilen()]);
@@ -2274,7 +2276,7 @@
         ['Özet          → Genel bütçe, kalan para ve sayılar'],
         ['Kişiler       → Kişi listesi + toplam gelen / alacak'],
         ['Gönderimler   → Ay + Kişi + Tutar (kalem kalem)'],
-        ['Gelen Özet    → 12 aylık kişi bazlı tablo'],
+        ['Verenler Özet → 12 aylık kişi bazlı tablo'],
         ['Malzemeler    → Alınan ve bekleyen giderler'],
         ['Eski Borç     → 12 aylık borç tablosu (− = ödendi)'],
         ['Aylık Özet    → Ay ay toplamlar'],
