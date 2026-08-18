@@ -314,6 +314,30 @@
       cursor: pointer;
       flex-shrink: 0;
     }
+    #cellColorPalette {
+      display: none; position: fixed; z-index: 20000; background: #fff;
+      border: 1px solid #cbd5e1; border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.18); padding: 10px; max-width: 270px;
+    }
+    #cellColorPalette.show { display: block; }
+    #cellColorPalette .cp-title { font-size: 0.75rem; font-weight: 700; color: #64748b; margin-bottom: 8px; }
+    #cellColorPalette .cp-colors { display: flex; flex-wrap: wrap; gap: 6px; }
+    #cellColorPalette .cp-swatch {
+      width: 28px; height: 28px; border-radius: 8px; border: 2px solid #e2e8f0; cursor: pointer; padding: 0;
+    }
+    #cellColorPalette .cp-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    #cellColorPalette .cp-row input[type="color"] {
+      width: 36px; height: 28px; border: none; background: none; padding: 0; cursor: pointer;
+    }
+    #cellColorPalette .cp-clear {
+      border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626;
+      border-radius: 8px; padding: 5px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+    }
+    .cell-wrap { position: relative; display: flex; flex-direction: column; gap: 2px; }
+    .cell-color-btn {
+      align-self: flex-end; width: 18px; height: 11px; border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.15); cursor: pointer; padding: 0; opacity: 0.9;
+    }
   </style>
 </head>
 <body>
@@ -419,7 +443,7 @@
         <input type="text" id="gelenAd" placeholder="Örn: Ahmet Yılmaz" />
       </div>
       <button type="button" class="btn btn-green" onclick="addGelenKisi()">Kişi Ekle</button>
-      <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Kişi ekledikten sonra yeşil <b>+</b> ile bu aya 250 ekleyebilir veya hücrelere yazabilirsiniz.</p>
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Kişi ekledikten sonra yeşil <b>+</b> ile 250 yazabilir, hücrelere <b>rakam veya yazı</b> girebilir, küçük renk kutusundan renk seçebilirsiniz.</p>
     </div>
     <div class="card">
       <h2>📋 Gelen Tablosu (12 Ay)</h2>
@@ -475,7 +499,7 @@
         <input type="text" id="borcAd" placeholder="Örn: Ahmet Yılmaz" />
       </div>
       <button type="button" class="btn btn-green" onclick="addBorcKisi()">Kişi Ekle</button>
-      <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Aylara <b>elle tutar yazın</b>. Yeşil <b>+</b> kısayol ile 250 yazar. <b>−</b> = ödendi. ✎ kaydeder, Sil ile siler. Sadece girilen tutarlar toplanır.</p>
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Aylara <b>tutar veya yazı</b> yazın. Yeşil <b>+</b> → 250. <b>−</b> = ödendi. Küçük renk kutusuyla hücre rengi seçin. Sadece sayısal tutarlar toplanır.</p>
     </div>
     <div class="card">
       <h2>📋 Eski Borç Tablosu (12 Ay)</h2>
@@ -519,6 +543,14 @@
     <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">“Excel’e Aktar” ile profesyonel çok sayfalı .xlsx iner (Özet, Kişiler, Gönderimler, Malzemeler…).</p>
   </div>
 
+    <div id="cellColorPalette" role="dialog" aria-label="Renk seç">
+    <div class="cp-title">Hücre rengi</div>
+    <div class="cp-colors" id="cpSwatches"></div>
+    <div class="cp-row">
+      <input type="color" id="cpCustom" title="Özel renk" value="#fde68a" />
+      <button type="button" class="cp-clear" id="cpClear">Rengi kaldır</button>
+    </div>
+  </div>
   <div id="toast"></div>
 
   <script>
@@ -620,25 +652,106 @@
     function totalGonderilen() {
       return state.gelenKisiler.reduce((s, k) => {
         const aylar = k.aylar || {};
-        return s + Object.values(aylar).reduce((a, v) => a + (Number(v) || 0), 0);
+        return s + Object.values(aylar).reduce((a, v) => a + cellNumericPart(v), 0);
       }, 0);
     }
     function kisiGelenToplam(k) {
       const aylar = k.aylar || {};
-      return Object.values(aylar).reduce((a, v) => a + (Number(v) || 0), 0);
+      return Object.values(aylar).reduce((a, v) => a + cellNumericPart(v), 0);
     }
     function totalGider() {
       return state.malzemeler
         .filter(m => m.alindi === 'Evet')
         .reduce((s, m) => s + (Number(m.fiyat) * Number(m.miktar)), 0);
     }
-    // Ay değeri: -1 = ödendi ("-"), boş = 250, sayı = o tutar
+    // Ay değeri: -1 = ödendi, boş = 0, sayı veya yazıdaki sayı
     function ayBorcDegeri(val) {
-      // Sadece elle girilen tutarlar toplanır; boş = 0, ödendi (−) = 0
       if (val === -1 || val === '-1' || val === '-' || val === '−') return 0;
       if (val === '' || val === null || val === undefined) return 0;
-      const n = Number(val);
+      if (typeof val === 'number') return isNaN(val) ? 0 : val;
+      const s = String(val).trim().replace(',', '.');
+      if (s === '-' || s === '−') return 0;
+      const n = parseFloat(s);
       return isNaN(n) ? 0 : n;
+    }
+    function cellNumericPart(val) { return ayBorcDegeri(val); }
+    function parseCellValue(value) {
+      const v = String(value == null ? '' : value).trim();
+      if (v === '') return '';
+      if (v === '-' || v === '−') return -1;
+      const normalized = v.replace(',', '.');
+      if (/^[+-]?\d+(\.\d+)?$/.test(normalized)) {
+        const n = parseFloat(normalized);
+        return isNaN(n) ? v : n;
+      }
+      return v;
+    }
+    const CELL_COLORS = [
+      '#bbf7d0', '#fde68a', '#fecaca', '#bfdbfe',
+      '#e9d5ff', '#fbcfe8', '#a5f3fc', '#d9f99d',
+      '#fdba74', '#e2e8f0', '#ffffff'
+    ];
+    let colorPickerTarget = null;
+    function setCellColor(tip, id, ay, color) {
+      id = String(id);
+      const list = tip === 'gelen' ? state.gelenKisiler : state.borcKisiler;
+      const k = list.find(x => String(x.id) === id);
+      if (!k) return;
+      if (!k.renkler) k.renkler = {};
+      if (!color) delete k.renkler[ay];
+      else k.renkler[ay] = color;
+      save();
+      if (tip === 'gelen') renderGonderimler();
+      else renderBorclar();
+      showToast(color ? 'Renk uygulandı' : 'Renk kaldırıldı');
+    }
+    function openCellColorPicker(ev, tip, id, ay) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      colorPickerTarget = { tip: tip, id: String(id), ay: Number(ay) };
+      const pal = document.getElementById('cellColorPalette');
+      if (!pal) return;
+      const sw = document.getElementById('cpSwatches');
+      if (sw && !sw.dataset.ready) {
+        sw.innerHTML = CELL_COLORS.map(function(c) {
+          return '<button type="button" class="cp-swatch" data-color="' + c + '" style="background:' + c + '" title="' + c + '"></button>';
+        }).join('');
+        sw.dataset.ready = '1';
+        sw.addEventListener('click', function(e) {
+          const btn = e.target.closest('[data-color]');
+          if (!btn || !colorPickerTarget) return;
+          setCellColor(colorPickerTarget.tip, colorPickerTarget.id, colorPickerTarget.ay, btn.getAttribute('data-color'));
+          closeCellColorPicker();
+        });
+      }
+      const custom = document.getElementById('cpCustom');
+      if (custom && !custom.dataset.bound) {
+        custom.dataset.bound = '1';
+        custom.addEventListener('change', function() {
+          if (!colorPickerTarget) return;
+          setCellColor(colorPickerTarget.tip, colorPickerTarget.id, colorPickerTarget.ay, custom.value);
+          closeCellColorPicker();
+        });
+      }
+      const clr = document.getElementById('cpClear');
+      if (clr && !clr.dataset.bound) {
+        clr.dataset.bound = '1';
+        clr.addEventListener('click', function() {
+          if (!colorPickerTarget) return;
+          setCellColor(colorPickerTarget.tip, colorPickerTarget.id, colorPickerTarget.ay, '');
+          closeCellColorPicker();
+        });
+      }
+      var x = Math.min((ev.clientX || 40), window.innerWidth - 280);
+      var y = Math.min((ev.clientY || 40), window.innerHeight - 170);
+      pal.style.left = Math.max(8, x) + 'px';
+      pal.style.top = Math.max(8, y) + 'px';
+      pal.classList.add('show');
+    }
+    function closeCellColorPicker() {
+      var pal = document.getElementById('cellColorPalette');
+      if (pal) pal.classList.remove('show');
+      colorPickerTarget = null;
     }
     function totalBorc() {
       return state.borcKisiler.reduce((s, k) => s + kisiBorcToplam(k), 0);
@@ -800,15 +913,26 @@
           }
           if (editing) readonly = '';
 
+          const customColor = (k.renkler && k.renkler[i]) ? k.renkler[i] : '';
+          if (customColor) {
+            cellStyle = 'background:' + customColor + ';';
+            inputStyle = 'background:' + customColor + ';border-color:#94a3b8;color:#0f172a;font-weight:600;';
+          }
+
           html += `<td style="padding:2px;${cellStyle}">
-            <input type="text" inputmode="text"
-              data-gelen-id="${k.id}" data-ay="${i}"
-              style="width:100%;border:1px solid #e2e8f0;border-radius:4px;padding:4px 2px;text-align:right;font-size:0.8rem;${inputStyle}"
-              value="${escape(displayVal)}"
-              ${readonly}
-              onchange="updateGelenAy('${k.id}', ${i}, this.value)"
-              onblur="updateGelenAy('${k.id}', ${i}, this.value)"
-              placeholder="${(editing || isAktifAy) && !hasValue ? '250 / not' : ''}">
+            <div class="cell-wrap">
+              <input type="text" inputmode="text"
+                data-gelen-id="${k.id}" data-ay="${i}"
+                style="width:100%;border:1px solid #e2e8f0;border-radius:4px;padding:4px 2px;text-align:right;font-size:0.8rem;${inputStyle}"
+                value="${escape(displayVal)}"
+                ${readonly}
+                onchange="updateGelenAy('${k.id}', ${i}, this.value)"
+                onblur="updateGelenAy('${k.id}', ${i}, this.value)"
+                placeholder="${(editing || isAktifAy) && !hasValue ? '250 / not' : ''}">
+              <button type="button" class="cell-color-btn" title="Renk seç"
+                style="background:${customColor || '#e2e8f0'}"
+                onclick="openCellColorPicker(event,'gelen','${k.id}',${i})"></button>
+            </div>
           </td>`;
         }
         const top = kisiGelenToplam(k);
@@ -945,33 +1069,45 @@
         for (let i = 0; i < 12; i++) {
           const raw = aylar[i];
           const isPaid = raw === -1 || raw === '-1' || raw === '-' || raw === '−';
-          const num = (!isPaid && raw !== '' && raw != null) ? (Number(raw) || 0) : 0;
+          const num = cellNumericPart(raw);
+          const hasText = !isPaid && raw !== '' && raw != null && typeof raw === 'string' && isNaN(Number(String(raw).replace(',', '.')));
           let displayVal = '';
           if (isPaid) displayVal = '−';
-          else if (num > 0) displayVal = String(num);
+          else if (raw !== '' && raw != null && raw !== undefined) displayVal = String(raw);
 
+          const customColor = (k.renkler && k.renkler[i]) ? k.renkler[i] : '';
           let cellStyle = '';
           let inputStyle = '';
-          if (isPaid) {
+          if (customColor) {
+            cellStyle = 'background:' + customColor + ';';
+            inputStyle = 'background:' + customColor + ';border-color:#94a3b8;color:#0f172a;font-weight:600;';
+          } else if (isPaid) {
             cellStyle = 'background:#dcfce7;';
             inputStyle = 'background:#bbf7d0;border-color:#22c55e;color:#166534;font-weight:700;';
-          } else if (num > 0) {
+          } else if (num > 0 && !hasText) {
             cellStyle = 'background:#fef3c7;';
             inputStyle = 'background:#fde68a;border-color:#f59e0b;color:#92400e;font-weight:700;';
+          } else if (hasText) {
+            cellStyle = 'background:#e0e7ff;';
+            inputStyle = 'background:#c7d2fe;border-color:#6366f1;color:#312e81;font-weight:600;';
           } else {
             cellStyle = 'background:#fff;';
             inputStyle = 'background:#f8fafc;border-color:#e2e8f0;';
           }
 
-          // Her ay kutusu elle yazılabilir
           html += `<td style="padding:2px;${cellStyle}">
-            <input type="text" inputmode="decimal"
-              data-borc-id="${kid}" data-ay="${i}"
-              style="width:100%;border:1px solid #e2e8f0;border-radius:4px;padding:4px 2px;text-align:right;font-size:0.8rem;${inputStyle}"
-              value="${displayVal}"
-              onchange="updateBorcAy('${kid}', ${i}, this.value)"
-              onblur="updateBorcAy('${kid}', ${i}, this.value)"
-              placeholder="0">
+            <div class="cell-wrap">
+              <input type="text" inputmode="text"
+                data-borc-id="${kid}" data-ay="${i}"
+                style="width:100%;border:1px solid #e2e8f0;border-radius:4px;padding:4px 2px;text-align:right;font-size:0.8rem;${inputStyle}"
+                value="${escape(displayVal)}"
+                onchange="updateBorcAy('${kid}', ${i}, this.value)"
+                onblur="updateBorcAy('${kid}', ${i}, this.value)"
+                placeholder="tutar / not">
+              <button type="button" class="cell-color-btn" title="Renk seç"
+                style="background:${customColor || '#e2e8f0'}"
+                onclick="openCellColorPicker(event,'borc','${kid}',${i})"></button>
+            </div>
           </td>`;
         }
         const top = kisiBorcToplam(k);
@@ -1517,18 +1653,9 @@
       const k = state.borcKisiler.find(x => String(x.id) === kisiId);
       if (!k) return;
       if (!k.aylar) k.aylar = {};
-      const v = String(value == null ? '' : value).trim().replace(',', '.');
-      if (v === '-' || v === '−') {
-        k.aylar[ayIndex] = -1; // ödendi
-      } else if (v === '') {
-        k.aylar[ayIndex] = '';
-      } else {
-        const n = parseFloat(v);
-        k.aylar[ayIndex] = isNaN(n) ? '' : n;
-      }
+      k.aylar[ayIndex] = parseCellValue(value);
       save();
       updateSummary();
-      // Toplamları güncelle (tabloyu komple çizmeden)
       renderTumIslemler();
     }
 
@@ -1540,13 +1667,7 @@
       document.querySelectorAll(`input[data-borc-id="${kisiId}"]`).forEach(inp => {
         const ay = parseInt(inp.getAttribute('data-ay'), 10);
         if (isNaN(ay)) return;
-        const v = String(inp.value || '').trim().replace(',', '.');
-        if (v === '-' || v === '−') k.aylar[ay] = -1;
-        else if (v === '') k.aylar[ay] = '';
-        else {
-          const n = parseFloat(v);
-          k.aylar[ay] = isNaN(n) ? '' : n;
-        }
+        k.aylar[ay] = parseCellValue(inp.value);
       });
       save();
       updateSummary();
@@ -1914,6 +2035,8 @@
     window.addBorcKisi = addBorcKisi;
     window.delBorcKisi = delBorcKisi;
     window.updateBorcAy = updateBorcAy;
+    window.openCellColorPicker = openCellColorPicker;
+    window.closeCellColorPicker = closeCellColorPicker;
     window.addMalzeme = addMalzeme;
     window.delMalzeme = delMalzeme;
     window.toggleAlindi = toggleAlindi;
@@ -1937,6 +2060,10 @@
     document.addEventListener('click', function(ev) {
       const overlay = document.getElementById('tumIslemlerOverlay');
       if (overlay && ev.target === overlay) closeTumIslemler();
+      const pal = document.getElementById('cellColorPalette');
+      if (pal && pal.classList.contains('show') && !pal.contains(ev.target) && !(ev.target.closest && ev.target.closest('.cell-color-btn'))) {
+        closeCellColorPicker();
+      }
     });
 
 
